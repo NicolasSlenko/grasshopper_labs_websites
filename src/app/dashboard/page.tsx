@@ -55,22 +55,38 @@ const mockStudentData = {
 
 const INTERNSHIP_AVG_GPA = 3.6
 
-// Helper function to calculate year in school from graduation date
-function calculateYearInSchool(endDate?: string): number {
+// Helper function to calculate year in school from start and end dates
+function calculateYearInSchool(endDate?: string, startDate?: string): number {
   if (!endDate) return 1
   
-  const gradYear = new Date(endDate).getFullYear()
-  const currentYear = new Date().getFullYear()
-  const yearsUntilGrad = gradYear - currentYear
+  const gradDate = new Date(endDate)
+  const now = new Date()
   
-  // If they're graduating this year or have graduated, they're a senior (year 4)
-  if (yearsUntilGrad <= 0) return 4
-  // If graduating next year, they're a junior (year 3)
-  if (yearsUntilGrad === 1) return 3
-  // If graduating in 2 years, they're a sophomore (year 2)
-  if (yearsUntilGrad === 2) return 2
-  // Otherwise freshman (year 1)
-  return 1
+  // If they've already graduated
+  if (gradDate < now) return 4
+  
+  // Calculate based on start date if available
+  if (startDate) {
+    const startDateObj = new Date(startDate)
+    
+    // Calculate how many months have passed since starting
+    const monthsSinceStart = (now.getFullYear() - startDateObj.getFullYear()) * 12 + 
+                            (now.getMonth() - startDateObj.getMonth())
+    
+    // Determine year based on months (assuming typical 4-year program)
+    if (monthsSinceStart < 12) return 1      // Freshman (0-12 months)
+    if (monthsSinceStart < 24) return 2      // Sophomore (12-24 months)
+    if (monthsSinceStart < 36) return 3      // Junior (24-36 months)
+    return 4                                  // Senior (36+ months)
+  }
+  
+  // Fallback: calculate from graduation date
+  const yearsUntilGrad = gradDate.getFullYear() - now.getFullYear()
+  
+  if (yearsUntilGrad <= 0) return 4           // Graduating this year or graduated
+  if (yearsUntilGrad === 1) return 3          // Junior
+  if (yearsUntilGrad === 2) return 2          // Sophomore
+  return 1                                     // Freshman
 }
 
 // GPA Component
@@ -878,31 +894,33 @@ export default function DashboardPage() {
   }, [])
 
   // Extract data from resume or use mock data
-  const studentData = resumeData
-    ? {
-        gpa: resumeData.education?.[0]?.gpa || 0,
-        yearInSchool: calculateYearInSchool(resumeData.education?.[0]?.end_date),
-        internshipCount:
-          resumeData.experience?.filter((exp: any) => exp.position.toLowerCase().includes("intern")).length || 0,
-        projectCount: resumeData.projects?.length || 0,
-        skills: {
-          programmingLanguages: resumeData.skills?.programming_languages || [],
-          frameworks: resumeData.skills?.frameworks || [],
-          databases: resumeData.skills?.databases || [],
-          devops: resumeData.skills?.devops_tools || [],
-          certifications: resumeData.certifications?.map((cert: any) => cert.name) || [],
-        },
-        resume: {
-          hasGithub: !!resumeData.basics?.github,
-          hasLinkedIn: !!resumeData.basics?.linkedin,
-          hasPortfolio: !!resumeData.basics?.portfolio,
-          hasProjects: (resumeData.projects?.length || 0) > 0,
-          hasExperience: (resumeData.experience?.length || 0) > 0,
-          hasCertifications: (resumeData.certifications?.length || 0) > 0,
-          hasExtracurriculars: (resumeData.extracurriculars?.length || 0) > 0,
-        },
-      }
-    : mockStudentData
+  const studentData = resumeData ? {
+    gpa: resumeData.education?.[0]?.gpa || 0,
+    yearInSchool: calculateYearInSchool(
+      resumeData.education?.[0]?.end_date,
+      resumeData.education?.[0]?.start_date
+    ),
+    internshipCount: resumeData.experience?.filter(exp => 
+      exp.position.toLowerCase().includes('intern')
+    ).length || 0,
+    projectCount: resumeData.projects?.length || 0,
+    skills: {
+      programmingLanguages: resumeData.skills?.programming_languages || [],
+      frameworks: resumeData.skills?.frameworks || [],
+      databases: resumeData.skills?.databases || [],
+      devops: resumeData.skills?.devops_tools || [],
+      certifications: resumeData.certifications?.map(cert => cert.name) || [],
+    },
+    resume: {
+      hasGithub: !!resumeData.basics?.github,
+      hasLinkedIn: !!resumeData.basics?.linkedin,
+      hasPortfolio: !!resumeData.basics?.portfolio,
+      hasProjects: (resumeData.projects?.length || 0) > 0,
+      hasExperience: (resumeData.experience?.length || 0) > 0,
+      hasCertifications: (resumeData.certifications?.length || 0) > 0,
+      hasExtracurriculars: (resumeData.extracurriculars?.length || 0) > 0,
+    },
+  } : mockStudentData
 
   // Show loading state
   if (isLoading) {
