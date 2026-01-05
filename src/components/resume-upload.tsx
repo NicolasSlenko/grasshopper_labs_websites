@@ -115,21 +115,21 @@ export function ResumeUpload() {
       })
 
       const result = await response.json()
-      
+
       if (!response.ok) {
         console.error("API Error:", result)
         throw new Error(result.message || result.error || "Failed to parse")
       }
 
       setParseResult(result)
-      
+
       // Log the full JSON output to console for debugging
       console.log("==========================================")
       console.log("PARSED RESUME OUTPUT (SEMANTIC PARSER):")
       console.log("==========================================")
       console.log(JSON.stringify(result, null, 2))
       console.log("==========================================")
-      
+
       // Show verification form after successful parse
       if (result.details) {
         setShowVerification(true)
@@ -182,9 +182,20 @@ export function ResumeUpload() {
       })
 
       const result = await response.json()
-      
+
       if (result.success) {
         toast.success("Resume data confirmed and saved securely!")
+
+        // Trigger coursework matching immediately after save
+        try {
+          // No await needed - let it run in background or await if we want to confirm it started
+          fetch("/api/match-coursework?threshold=80").catch(err =>
+            console.error("Background coursework matching failed:", err)
+          )
+        } catch (matchError) {
+          console.error("Error triggering coursework matching:", matchError)
+        }
+
         router.push("/questionnaire")
       } else {
         toast.warning("Resume data saved locally, but cloud save failed")
@@ -193,7 +204,7 @@ export function ResumeUpload() {
       console.error("Error saving resume:", error)
       toast.warning("Resume data saved locally only")
     }
-    
+
     setShowVerification(false)
   }
 
@@ -413,156 +424,156 @@ export function ResumeUpload() {
 
       <SignedIn>
         <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Upload Resume</CardTitle>
-          <CardDescription>
-            Upload your resume to kick off the process. Supported formats: PDF, DOC, DOCX, TXT (Max 10MB). Once confirmed,
-            you&apos;ll be routed directly to job preferences.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div
-            {...getRootProps()}
-            className={cn(
-              "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
-              isDragActive ? "border-primary bg-primary/5" : "border-border hover:border-primary/50",
-              isUploading && "pointer-events-none opacity-50",
-            )}
-          >
-            <input {...getInputProps()} />
-            <div className="flex flex-col items-center space-y-4">
-              <Upload className="h-12 w-12 text-muted-foreground" />
-              {isDragActive ? (
-                <p className="text-lg font-medium">Drop your resume here...</p>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-lg font-medium">
-                    {isUploading ? "Uploading..." : "Drop your resume here, or click to select"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">PDF, DOC, DOCX, TXT up to 10MB</p>
+          <Card>
+            <CardHeader>
+              <CardTitle>Upload Resume</CardTitle>
+              <CardDescription>
+                Upload your resume to kick off the process. Supported formats: PDF, DOC, DOCX, TXT (Max 10MB). Once confirmed,
+                you&apos;ll be routed directly to job preferences.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div
+                {...getRootProps()}
+                className={cn(
+                  "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
+                  isDragActive ? "border-primary bg-primary/5" : "border-border hover:border-primary/50",
+                  isUploading && "pointer-events-none opacity-50",
+                )}
+              >
+                <input {...getInputProps()} />
+                <div className="flex flex-col items-center space-y-4">
+                  <Upload className="h-12 w-12 text-muted-foreground" />
+                  {isDragActive ? (
+                    <p className="text-lg font-medium">Drop your resume here...</p>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-lg font-medium">
+                        {isUploading ? "Uploading..." : "Drop your resume here, or click to select"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">PDF, DOC, DOCX, TXT up to 10MB</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {uploadStatus === "success" && (
+                <div className="mt-4 p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg flex items-center space-x-2">
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <span className="text-green-800 dark:text-green-200">File uploaded successfully!</span>
                 </div>
               )}
-            </div>
-          </div>
 
-          {uploadStatus === "success" && (
-            <div className="mt-4 p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg flex items-center space-x-2">
-              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-              <span className="text-green-800 dark:text-green-200">File uploaded successfully!</span>
-            </div>
-          )}
-
-          {uploadStatus === "error" && (
-            <div className="mt-4 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center space-x-2">
-              <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
-              <span className="text-red-800 dark:text-red-200">{errorMessage}</span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {uploadedFile && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Uploaded File & Parsing</CardTitle>
-            <CardDescription>Your uploaded resume file with AI-powered parsing</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <FileText className="h-8 w-8 text-blue-600" />
-                  <div>
-                    <p className="font-medium">{uploadedFile.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatFileSize(uploadedFile.size)} • Uploaded{" "}
-                      {new Date(uploadedFile.uploadedAt).toLocaleString()}
-                    </p>
-                  </div>
+              {uploadStatus === "error" && (
+                <div className="mt-4 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center space-x-2">
+                  <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                  <span className="text-red-800 dark:text-red-200">{errorMessage}</span>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={removeFile}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
+              )}
+            </CardContent>
+          </Card>
 
-              <div className="space-y-4">
-                {!parseResult ? (
-                  <div className="flex gap-4 flex-wrap">
-                    <Button 
-                      onClick={parseResume} 
-                      disabled={isParsing} 
-                      variant="default" 
+          {uploadedFile && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Uploaded File & Parsing</CardTitle>
+                <CardDescription>Your uploaded resume file with AI-powered parsing</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <FileText className="h-8 w-8 text-blue-600" />
+                      <div>
+                        <p className="font-medium">{uploadedFile.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatFileSize(uploadedFile.size)} • Uploaded{" "}
+                          {new Date(uploadedFile.uploadedAt).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
                       size="sm"
+                      onClick={removeFile}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
-                      {isParsing ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Rocket className="h-4 w-4 mr-2" />
-                      )}
-                      Parse Resume
+                      <X className="h-4 w-4" />
                     </Button>
                   </div>
-                ) : (
-                  <div className="flex items-center gap-4 flex-wrap w-full">
-                    <div className="flex items-center gap-4 flex-wrap">
-                      <Button variant="secondary" size="sm" onClick={handleEditResume}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
-                      </Button>
 
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="secondary" size="sm">
-                            <FileUp className="h-4 w-4 mr-2" />
-                            Export as
+                  <div className="space-y-4">
+                    {!parseResult ? (
+                      <div className="flex gap-4 flex-wrap">
+                        <Button
+                          onClick={parseResume}
+                          disabled={isParsing}
+                          variant="default"
+                          size="sm"
+                        >
+                          {isParsing ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Rocket className="h-4 w-4 mr-2" />
+                          )}
+                          Parse Resume
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-4 flex-wrap w-full">
+                        <div className="flex items-center gap-4 flex-wrap">
+                          <Button variant="secondary" size="sm" onClick={handleEditResume}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="hover:cursor-pointer">
-                          <DropdownMenuItem onClick={() => exportJSON("download")} className="hover:cursor-pointer">File</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => exportJSON("clipboard")} className="hover:cursor-pointer">Clipboard</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                )}
 
-                {parseResult && (
-                  <div className="mt-4">
-                    <div className="border rounded-lg p-4 bg-muted/50">
-                      <h3 className="font-semibold mb-3 flex items-center">
-                        <Rocket className="h-4 w-4 mr-2" />
-                        Parsing Results
-                      </h3>
-                      {renderParseResult({
-                        details: verifiedData || parseResult.details,
-                        missing: parseResult.missing
-                      })}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-3">
-                      Confirm your resume details to be redirected automatically to the job preferences questionnaire.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="secondary" size="sm">
+                                <FileUp className="h-4 w-4 mr-2" />
+                                Export as
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="hover:cursor-pointer">
+                              <DropdownMenuItem onClick={() => exportJSON("download")} className="hover:cursor-pointer">File</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => exportJSON("clipboard")} className="hover:cursor-pointer">Clipboard</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    )}
 
-      {showVerification && parseResult?.details && (
-        <ResumeVerification
-          parsedData={parseResult.details}
-          onConfirm={handleVerificationConfirm}
-          onCancel={handleVerificationCancel}
-          open={showVerification}
-        />
-      )}
+                    {parseResult && (
+                      <div className="mt-4">
+                        <div className="border rounded-lg p-4 bg-muted/50">
+                          <h3 className="font-semibold mb-3 flex items-center">
+                            <Rocket className="h-4 w-4 mr-2" />
+                            Parsing Results
+                          </h3>
+                          {renderParseResult({
+                            details: verifiedData || parseResult.details,
+                            missing: parseResult.missing
+                          })}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-3">
+                          Confirm your resume details to be redirected automatically to the job preferences questionnaire.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {showVerification && parseResult?.details && (
+            <ResumeVerification
+              parsedData={parseResult.details}
+              onConfirm={handleVerificationConfirm}
+              onCancel={handleVerificationCancel}
+              open={showVerification}
+            />
+          )}
         </div>
       </SignedIn>
     </div>
