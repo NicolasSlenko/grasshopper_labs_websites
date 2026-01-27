@@ -1,6 +1,26 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
+## Environment Setup
+
+This app uses AWS S3 (uploads, resume, preferences, matched courses) and Clerk for auth. Create a `.env.local` at the repo root (copy from `.env.example`) and fill in the required values:
+
+Required variables:
+- `AWS_BUCKET_NAME`: Your S3 bucket name
+- `AWS_BUCKET_REGION`: Bucket region (e.g., `us-east-1`)
+- `IAM_AWS_ACCESS_KEY`: IAM Access Key ID with Put/Get/Delete access to the bucket
+- `IAM_AWS_SECRET_ACCESS_KEY`: IAM Secret Access Key
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`: Clerk publishable key
+- `CLERK_SECRET_KEY`: Clerk secret key
+
+On Windows PowerShell, you can scaffold a `.env.local` like this and then edit it:
+
+```powershell
+Copy-Item .env.example .env.local -Force
+notepad .env.local
+```
+
+After updating env vars, restart the dev server so the API routes pick them up.
 
 First, run the development server:
 
