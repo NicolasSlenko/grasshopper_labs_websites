@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { deleteFromS3, getJsonFromS3, putJsonToS3 } from "@/lib/aws/s3"
 
+// POST - Save resume data
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await auth()
@@ -70,12 +71,14 @@ export async function DELETE() {
     if (!userId) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
     }
+    // Also clear matched courses when resume is deleted (S3 cache)
+    await deleteFromS3(`uploads/${userId}/matched-courses.json`)
 
     await deleteFromS3(`uploads/${userId}/resume-data.json`)
 
     return NextResponse.json({ 
       success: true, 
-      message: "Resume data cleared successfully" 
+      message: "Resume data and matched courses cleared successfully" 
     })
   } catch (error) {
     console.error("Error clearing resume data:", error)

@@ -185,6 +185,22 @@ export function ResumeUpload() {
       
       if (result.success) {
         toast.success("Resume data confirmed and saved securely!")
+        // Kick off coursework analysis but don't block navigation
+        ;(async () => {
+          try {
+            toast.info("Analyzing your coursework...")
+            const matchResponse = await fetch("/api/match-coursework?threshold=80")
+            const matchData = await matchResponse.json()
+            if (matchData.success) {
+              toast.success("Coursework analysis complete!")
+            } else {
+              toast.warning("Course matching completed with warnings")
+            }
+          } catch (matchError) {
+            console.error("Error matching coursework:", matchError)
+            // Non-blocking warning; dashboard will still work
+          }
+        })()
         router.push("/questionnaire")
       } else {
         toast.warning("Resume data saved locally, but cloud save failed")
