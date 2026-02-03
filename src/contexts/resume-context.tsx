@@ -3,12 +3,22 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import type { Resume } from "@/app/api/parse/resumeSchema"
 
+interface ResumeSubmission {
+  id: string
+  fileName: string
+  s3Key: string
+  uploadedAt: string
+  score: number
+}
+
 interface ResumeContextType {
   resumeData: Resume | null
   setResumeData: (data: Resume | null) => void
   isLoading: boolean
   setIsLoading: (loading: boolean) => void
   refreshResumeData: () => Promise<void>
+  currentFileName: string | null
+  setCurrentFileName: (name: string | null) => void
 }
 
 const ResumeContext = createContext<ResumeContextType | undefined>(undefined)
@@ -16,6 +26,7 @@ const ResumeContext = createContext<ResumeContextType | undefined>(undefined)
 export function ResumeProvider({ children }: { children: ReactNode }) {
   const [resumeData, setResumeData] = useState<Resume | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [currentFileName, setCurrentFileName] = useState<string | null>(null)
 
   // Load resume data from JSON file on mount
   const loadResumeData = async () => {
@@ -34,6 +45,16 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       } else {
         setResumeData(null)
         console.log("No resume data found for this user")
+      }
+
+      // Also fetch the most recent submission to get filename
+      const submissionsResponse = await fetch("/api/resume-submissions")
+      if (submissionsResponse.ok) {
+        const submissionsResult = await submissionsResponse.json()
+        if (submissionsResult.success && submissionsResult.data?.length > 0) {
+          // Get the most recent submission (first one since sorted by date desc)
+          setCurrentFileName(submissionsResult.data[0].fileName)
+        }
       }
     } catch (error) {
       console.error("Error loading resume data:", error)
@@ -56,6 +77,8 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
         isLoading,
         setIsLoading,
         refreshResumeData: loadResumeData,
+        currentFileName,
+        setCurrentFileName,
       }}
     >
       {children}

@@ -3,9 +3,11 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   type GetObjectCommandOutput,
 } from "@aws-sdk/client-s3"
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 import { Readable } from "stream"
 
 export const s3 = new S3Client({
@@ -117,4 +119,34 @@ export async function objectExistsInS3(key: string): Promise<boolean> {
     }
     throw error
   }
+}
+
+export interface S3Object {
+  key: string
+  lastModified: Date | undefined
+  size: number | undefined
+}
+
+export async function listObjectsInS3(prefix: string): Promise<S3Object[]> {
+  const response = await s3.send(
+    new ListObjectsV2Command({
+      Bucket: ensureBucket(),
+      Prefix: prefix,
+    }),
+  )
+
+  return (response.Contents || []).map((obj) => ({
+    key: obj.Key || "",
+    lastModified: obj.LastModified,
+    size: obj.Size,
+  }))
+}
+
+export async function getSignedUrlForObject(key: string, expiresIn: number = 3600): Promise<string> {
+  const command = new GetObjectCommand({
+    Bucket: ensureBucket(),
+    Key: key,
+  })
+  
+  return getSignedUrl(s3, command, { expiresIn })
 }

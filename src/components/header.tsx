@@ -46,6 +46,9 @@ export function Header() {
             </SignedOut>
             <SignedIn>
               <div className="flex items-center gap-2">
+                <Button variant="ghost" className="hidden md:inline-flex" asChild>
+                  <Link href="/profile">Profile</Link>
+                </Button>
                 <Button variant="outline" className="hidden md:inline-flex" asChild>
                   <Link href="/dashboard">Dashboard</Link>
                 </Button>

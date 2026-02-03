@@ -1,6 +1,18 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
-import { uploadToS3 } from "@/lib/aws/s3"
+import { uploadToS3, getJsonFromS3, putJsonToS3 } from "@/lib/aws/s3"
+
+interface ResumeSubmission {
+  id: string
+  fileName: string
+  s3Key: string
+  uploadedAt: string
+  score: number
+}
+
+interface SubmissionsMetadata {
+  submissions: ResumeSubmission[]
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,15 +60,38 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes)
 
     const safeName = file.name.replace(/[^\w.-]+/g, "-").toLowerCase()
-    const key = `uploads/${userId}/resumes/${safeName}`
+    // Add timestamp to make each upload unique
+    const timestamp = Date.now()
+    const key = `uploads/${userId}/resumes/${timestamp}-${safeName}`
 
     await uploadToS3(key, buffer, file.type || "application/octet-stream")
+
+    // Track this submission in metadata
+    const metadataKey = `uploads/${userId}/submissions-metadata.json`
+    let metadata = await getJsonFromS3<SubmissionsMetadata>(metadataKey)
+
+    const newSubmission: ResumeSubmission = {
+      id: Buffer.from(key + timestamp).toString("base64"),
+      fileName: file.name,
+      s3Key: key,
+      uploadedAt: new Date().toISOString(),
+      // Generate a random score between 50-95 for now
+      score: Math.floor(Math.random() * 46) + 50,
+    }
+
+    if (!metadata) {
+      metadata = { submissions: [] }
+    }
+
+    metadata.submissions.unshift(newSubmission) // Add to beginning (most recent first)
+    await putJsonToS3(metadataKey, metadata)
 
     return NextResponse.json({
       message: "File uploaded successfully",
       filename: key,
       size: file.size,
       type: file.type,
+      submission: newSubmission,
     })
   } catch (error) {
     console.error("Error uploading file:", error)

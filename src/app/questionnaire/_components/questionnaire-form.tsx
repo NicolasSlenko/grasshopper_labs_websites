@@ -20,15 +20,9 @@ const steps = [
   { id: "companySize", title: "Company Size", description: "What company size do you prefer?" },
   { id: "experienceLevel", title: "Experience Level", description: "What's your experience level?" },
   { id: "workSchedule", title: "Work Schedule", description: "What schedule works best for you?" },
-  { id: "benefits", title: "Benefits", description: "What benefits are most important?" },
   { id: "technicalSkills", title: "Technical Skills", description: "What are your technical skills?" },
   { id: "location", title: "Location", description: "Where do you want to work?" },
   { id: "salaryExpectations", title: "Salary", description: "What's your salary expectation?" },
-  { id: "learningPriorities", title: "Learning", description: "What do you want to learn?" },
-  { id: "workCulture", title: "Work Culture", description: "What culture do you prefer?" },
-  { id: "careerGoals", title: "Career Goals", description: "What are your career goals?" },
-  { id: "teamPreferences", title: "Team Preferences", description: "What team size do you prefer?" },
-  { id: "projectTypes", title: "Project Types", description: "What projects interest you?" },
 ]
 
 interface QuestionnaireFormProps {
@@ -49,15 +43,9 @@ export default function QuestionnaireForm({ initialData }: QuestionnaireFormProp
     companySize: [],
     experienceLevel: [],
     workSchedule: [],
-    benefits: [],
     technicalSkills: [],
     location: [],
     salaryExpectations: [],
-    learningPriorities: [],
-    workCulture: [],
-    careerGoals: [],
-    teamPreferences: [],
-    projectTypes: [],
   }
 
   const {
