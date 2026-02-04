@@ -63,7 +63,9 @@ export function ResumeUpload() {
       })
 
       if (!response.ok) {
-        throw new Error("Upload failed")
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+        console.error("Upload failed:", errorData)
+        throw new Error(errorData.error || `Upload failed with status ${response.status}`)
       }
 
       const result = await response.json()
@@ -78,9 +80,16 @@ export function ResumeUpload() {
 
       setUploadStatus("success")
     } catch (error) {
+      console.error("Upload error details:", error)
       setUploadStatus("error")
-      setErrorMessage("Failed to upload file. Please try again.")
-      console.error("Upload error:", error)
+      
+      let errorMsg = "Failed to upload file. Please try again."
+      if (error instanceof Error) {
+        errorMsg = error.message
+      }
+      
+      setErrorMessage(errorMsg)
+      toast.error(errorMsg)
     } finally {
       setIsUploading(false)
     }
