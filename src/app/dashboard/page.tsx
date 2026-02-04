@@ -7,7 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { 
   TrendingUp, Target, Check, Github, Linkedin, Globe, Briefcase, Award, Users, X,
-  GraduationCap, FolderKanban, Building2, Code, Database, Cloud, Cpu, Star, FileText
+  GraduationCap, FolderKanban, Building2, Code, Database, Cloud, Cpu, Star, FileText,
+  ChevronDown, ChevronUp
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { CareerPathCourseworkChart } from "@/components/career-path-radar"
@@ -1547,6 +1548,23 @@ const roleRequiredSkills: Record<string, { languages: string[], frameworks: stri
   },
 }
 
+interface CategoryBreakdown {
+  category: string
+  matched: string[]
+  missing: string[]
+  required: string[]
+}
+
+interface RoleMatchData {
+  role: string
+  matched: number
+  total: number
+  percentage: number
+  matchedSkills: string[]
+  missingSkills: string[]
+  categoryBreakdown: CategoryBreakdown[]
+}
+
 function RoleSkillsMatch({ 
   skills,
   roleTypes = []
@@ -1554,6 +1572,7 @@ function RoleSkillsMatch({
   skills: typeof mockStudentData.skills
   roleTypes?: string[]
 }) {
+  const [expandedRole, setExpandedRole] = useState<string | null>(null)
   const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"]
 
   // Get all user skills as lowercase for matching
@@ -1564,10 +1583,40 @@ function RoleSkillsMatch({
     ...skills.devops
   ].map(s => s.toLowerCase())
 
-  // Calculate match for each role
-  const calculateRoleMatch = (role: string): { matched: number, total: number, matchedSkills: string[] } => {
+  // Calculate match for each role with category breakdown
+  const calculateRoleMatch = (role: string): RoleMatchData => {
     const required = roleRequiredSkills[role]
-    if (!required) return { matched: 0, total: 0, matchedSkills: [] }
+    if (!required) return { 
+      role, 
+      matched: 0, 
+      total: 0, 
+      percentage: 0, 
+      matchedSkills: [], 
+      missingSkills: [],
+      categoryBreakdown: [] 
+    }
+
+    const categories = [
+      { name: "Languages", required: required.languages, userCategory: skills.programmingLanguages },
+      { name: "Frameworks", required: required.frameworks, userCategory: skills.frameworks },
+      { name: "Databases", required: required.databases, userCategory: skills.databases },
+      { name: "DevOps", required: required.devops, userCategory: skills.devops },
+    ]
+
+    const categoryBreakdown: CategoryBreakdown[] = categories.map(cat => {
+      const matched = cat.required.filter(req => 
+        userSkills.some(skill => skill.includes(req) || req.includes(skill))
+      )
+      const missing = cat.required.filter(req => 
+        !userSkills.some(skill => skill.includes(req) || req.includes(skill))
+      )
+      return {
+        category: cat.name,
+        matched,
+        missing,
+        required: cat.required
+      }
+    }).filter(cat => cat.required.length > 0)
 
     const allRequired = [
       ...required.languages,
@@ -1579,20 +1628,26 @@ function RoleSkillsMatch({
     const matchedSkills = allRequired.filter(req => 
       userSkills.some(skill => skill.includes(req) || req.includes(skill))
     )
+    const missingSkills = allRequired.filter(req => 
+      !userSkills.some(skill => skill.includes(req) || req.includes(skill))
+    )
+
+    const percentage = allRequired.length > 0 ? Math.round((matchedSkills.length / allRequired.length) * 100) : 0
 
     return {
+      role,
       matched: matchedSkills.length,
       total: allRequired.length,
-      matchedSkills
+      percentage,
+      matchedSkills,
+      missingSkills,
+      categoryBreakdown
     }
   }
 
   // Calculate matches for all roles and sort by match percentage
-  const allRoleMatches = Object.keys(roleRequiredSkills).map(role => {
-    const { matched, total, matchedSkills } = calculateRoleMatch(role)
-    const percentage = total > 0 ? Math.round((matched / total) * 100) : 0
-    return { role, matched, total, percentage, matchedSkills }
-  }).sort((a, b) => b.percentage - a.percentage)
+  const allRoleMatches = Object.keys(roleRequiredSkills).map(role => calculateRoleMatch(role))
+    .sort((a, b) => b.percentage - a.percentage)
 
   // Get top 3 roles
   const topRoles = allRoleMatches.slice(0, 3)
@@ -1600,12 +1655,22 @@ function RoleSkillsMatch({
   // Check if any target roles are in top 3
   const targetRolesInTop = roleTypes.filter(r => topRoles.some(tr => tr.role === r))
 
+  const toggleExpanded = (role: string) => {
+    setExpandedRole(expandedRole === role ? null : role)
+  }
+
+  // Transform data for pie chart
+  const chartData = topRoles.map(r => ({
+    role: r.role,
+    percentage: r.percentage
+  }))
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Role-Relevant Skills Match</CardTitle>
         <CardDescription>
-          Top 3 fields that best match your extracted skills
+          Top 3 fields that best match your extracted skills. Click to see details.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -1614,7 +1679,7 @@ function RoleSkillsMatch({
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={topRoles}
+                  data={chartData}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
@@ -1624,7 +1689,7 @@ function RoleSkillsMatch({
                   dataKey="percentage"
                   label={(entry) => `${entry.percentage}%`}
                 >
-                  {topRoles.map((entry, index) => (
+                  {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -1636,32 +1701,101 @@ function RoleSkillsMatch({
           <div className="space-y-4">
             {topRoles.map((role, index) => {
               const isTargetRole = roleTypes.includes(role.role)
+              const isExpanded = expandedRole === role.role
               return (
                 <div key={role.role} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: COLORS[index] }}
-                      />
-                      <span className="font-semibold">{role.role}</span>
-                      {isTargetRole && (
-                        <Badge variant="outline" className="text-xs border-primary text-primary">
-                          <Target className="h-3 w-3 mr-1" /> Target
-                        </Badge>
-                      )}
+                  <button
+                    onClick={() => toggleExpanded(role.role)}
+                    className="w-full text-left"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: COLORS[index] }}
+                        />
+                        <span className="font-semibold">{role.role}</span>
+                        {isTargetRole && (
+                          <Badge variant="outline" className="text-xs border-primary text-primary">
+                            <Target className="h-3 w-3 mr-1" /> Target
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge>{role.percentage}%</Badge>
+                        {isExpanded ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
                     </div>
-                    <Badge>{role.percentage}%</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground pl-5">
-                    {role.matched}/{role.total} skills matched
-                  </p>
-                  <div className="relative h-2 w-full rounded-full overflow-hidden bg-muted pl-5">
+                    <p className="text-sm text-muted-foreground pl-5">
+                      {role.matched}/{role.total} skills matched
+                    </p>
+                  </button>
+                  <div className="relative h-2 w-full rounded-full overflow-hidden bg-muted ml-5">
                     <div
                       className="h-full transition-all"
                       style={{ width: `${role.percentage}%`, backgroundColor: COLORS[index] }}
                     />
                   </div>
+                  
+                  {/* Expanded skill details */}
+                  {isExpanded && (
+                    <div className="ml-5 mt-3 space-y-3 border-l-2 pl-4" style={{ borderColor: COLORS[index] }}>
+                      {role.categoryBreakdown.map((cat) => (
+                        <div key={cat.category} className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">{cat.category}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {cat.matched.length}/{cat.required.length}
+                            </span>
+                          </div>
+                          
+                          {/* Matched skills */}
+                          {cat.matched.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {cat.matched.map((skill) => (
+                                <Badge
+                                  key={skill}
+                                  variant="outline"
+                                  className="text-xs bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-800 text-green-700 dark:text-green-400"
+                                >
+                                  <Check className="h-3 w-3 mr-1" />
+                                  {skill}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* Missing skills */}
+                          {cat.missing.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {cat.missing.map((skill) => (
+                                <Badge
+                                  key={skill}
+                                  variant="outline"
+                                  className="text-xs bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-800 text-red-700 dark:text-red-400"
+                                >
+                                  <X className="h-3 w-3 mr-1" />
+                                  {skill}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      
+                      {/* Summary */}
+                      <div className="pt-2 border-t">
+                        <p className="text-xs text-muted-foreground">
+                          <span className="font-medium text-green-600 dark:text-green-400">{role.matched} skills</span> matched, 
+                          <span className="font-medium text-red-600 dark:text-red-400 ml-1">{role.missingSkills.length} skills</span> to learn
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )
             })}

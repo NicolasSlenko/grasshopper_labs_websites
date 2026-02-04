@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from "recharts"
 import { cn } from "@/lib/utils"
 import { Loader2, Check, X } from "lucide-react"
+import { useResume } from "@/contexts/resume-context"
 
 interface CourseMatch {
   resumeCourse: string
@@ -39,6 +40,7 @@ const DEFAULT_CATEGORIES = [
 ]
 
 export function CareerPathCourseworkChart() {
+  const { resumeData } = useResume()
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [matchedCourses, setMatchedCourses] = useState<Record<string, CourseMatch[]>>({})
   const [allUFCoursesByCategory, setAllUFCoursesByCategory] = useState<Record<string, Array<{ name: string; code: string }>>>({})
@@ -47,47 +49,61 @@ export function CareerPathCourseworkChart() {
   const [isSaving, setIsSaving] = useState(false)
 
   // Load matched courses from cached data
-  useEffect(() => {
-    const loadMatchedCourses = async () => {
-      try {
-        setIsLoading(true)
-        // Use the new cached endpoint instead of recalculating every time
-        const response = await fetch("/api/matched-courses")
-        const data: MatchResponse = await response.json()
+  const loadMatchedCourses = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      // Use the cached endpoint
+      const response = await fetch("/api/matched-courses")
+      const data: MatchResponse = await response.json()
 
-        if (data.success) {
-          setMatchedCourses(data.byCategory)
-          
-          // Also get all UF courses categorized
-          if (data.allUFCourses) {
-            const categorized: Record<string, Array<{ name: string; code: string }>> = {}
-            data.allUFCourses.forEach(course => {
-              if (!categorized[course.category]) {
-                categorized[course.category] = []
-              }
-              categorized[course.category].push({ name: course.name, code: course.code })
-            })
-            setAllUFCoursesByCategory(categorized)
-          }
-          
-          console.log("Loaded matched courses from cache:", data.byCategory)
-        } else {
-          setError(data.message || "Failed to load course matches")
+      if (data.success) {
+        setMatchedCourses(data.byCategory)
+        
+        // Also get all UF courses categorized
+        if (data.allUFCourses) {
+          const categorized: Record<string, Array<{ name: string; code: string }>> = {}
+          data.allUFCourses.forEach(course => {
+            if (!categorized[course.category]) {
+              categorized[course.category] = []
+            }
+            categorized[course.category].push({ name: course.name, code: course.code })
+          })
+          setAllUFCoursesByCategory(categorized)
         }
-      } catch (err) {
-        console.error("Error loading matched courses:", err)
-        setError("Error loading course data. Please upload your resume first.")
-      } finally {
-        setIsLoading(false)
+        
+        console.log("Loaded matched courses from cache:", data.byCategory)
+      } else {
+        setError(data.message || "Failed to load course matches")
       }
+    } catch (err) {
+      console.error("Error loading matched courses:", err)
+      setError("Error loading course data. Please upload your resume first.")
+    } finally {
+      setIsLoading(false)
     }
-
-    loadMatchedCourses()
   }, [])
+
+  // Load on mount
+  useEffect(() => {
+    loadMatchedCourses()
+  }, [loadMatchedCourses])
+
+  // Re-load when resumeData changes (after new resume is parsed)
+  useEffect(() => {
+    if (resumeData) {
+      // Small delay to allow the match-coursework API to complete (called from resume-upload)
+      const timer = setTimeout(() => {
+        loadMatchedCourses()
+      }, 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [resumeData, loadMatchedCourses])
 
   // Calculate completion percentage for each category
   // Based on how many courses are taken vs available
   const getCategoryCompletion = (category: string): number => {
+    if (!matchedCourses || !allUFCoursesByCategory) return 0
     const takenCourses = matchedCourses[category] || []
     const availableCourses = allUFCoursesByCategory[category] || []
     
@@ -105,12 +121,14 @@ export function CareerPathCourseworkChart() {
 
   // Check if a course has been taken
   const isCourseTaken = (category: string, courseCode: string): boolean => {
+    if (!matchedCourses) return false
     const takenCourses = matchedCourses[category] || []
     return takenCourses.some(match => match.ufCourse.code === courseCode)
   }
 
   // Get all courses for selected category
   const getAllCoursesForCategory = (category: string) => {
+    if (!allUFCoursesByCategory) return []
     return allUFCoursesByCategory[category] || []
   }
 

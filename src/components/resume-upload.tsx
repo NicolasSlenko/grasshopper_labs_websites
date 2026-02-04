@@ -34,7 +34,7 @@ interface ParseResult {
 }
 
 export function ResumeUpload() {
-  const { setResumeData } = useResume()
+  const { setResumeData, setCurrentFileName } = useResume()
   const router = useRouter()
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null)
   const [isUploading, setIsUploading] = useState(false)
@@ -170,6 +170,11 @@ export function ResumeUpload() {
   const handleVerificationConfirm = async (data: Resume) => {
     setVerifiedData(data)
     setResumeData(data) // Save to global context
+    
+    // Update the current filename in context
+    if (uploadedFile?.name) {
+      setCurrentFileName(uploadedFile.name)
+    }
 
     // Persist to S3 via API
     try {

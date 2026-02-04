@@ -226,7 +226,7 @@ export default function DashboardPage() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <RoleSkillsMatch />
+                  <RoleSkillsMatch skills={mockStudentData.skills} />
                 </AccordionContent>
               </AccordionItem>
             </Accordion>

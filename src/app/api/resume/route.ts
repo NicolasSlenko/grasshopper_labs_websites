@@ -1,6 +1,20 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { deleteFromS3, getJsonFromS3, putJsonToS3 } from "@/lib/aws/s3"
+import { calculateResumeScore } from "@/lib/resumeScoring"
+import type { Resume } from "@/app/api/parse/resumeSchema"
+
+interface ResumeSubmission {
+  id: string
+  fileName: string
+  s3Key: string
+  uploadedAt: string
+  score: number
+}
+
+interface SubmissionsMetadata {
+  submissions: ResumeSubmission[]
+}
 
 // POST - Save resume data
 export async function POST(request: NextRequest) {
@@ -10,13 +24,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
     }
 
-    const resumeData = await request.json()
+    const resumeData = await request.json() as Resume
+
+    // Calculate the score from parsed resume data
+    const score = calculateResumeScore(resumeData)
 
     await putJsonToS3(`uploads/${userId}/resume-data.json`, resumeData)
 
+    // Update the most recent submission's score with the calculated score
+    const metadataKey = `uploads/${userId}/submissions-metadata.json`
+    const metadata = await getJsonFromS3<SubmissionsMetadata>(metadataKey)
+    
+    if (metadata && metadata.submissions.length > 0) {
+      // Update the most recent submission's score
+      metadata.submissions[0].score = score
+      await putJsonToS3(metadataKey, metadata)
+    }
+
     return NextResponse.json({ 
       success: true, 
-      message: "Resume data saved successfully" 
+      message: "Resume data saved successfully",
+      score 
     })
   } catch (error) {
     console.error("Error saving resume data:", error)
