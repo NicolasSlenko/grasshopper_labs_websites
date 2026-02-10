@@ -16,12 +16,12 @@ interface ActionableInsightsProps {
 }
 
 const categoryColors: Record<string, { bg: string; text: string; border: string }> = {
-    projects: { bg: "bg-purple-50 dark:bg-purple-950/20", text: "text-purple-600", border: "border-purple-200" },
-    experience: { bg: "bg-blue-50 dark:bg-blue-950/20", text: "text-blue-600", border: "border-blue-200" },
-    skills: { bg: "bg-green-50 dark:bg-green-950/20", text: "text-green-600", border: "border-green-200" },
-    links: { bg: "bg-orange-50 dark:bg-orange-950/20", text: "text-orange-600", border: "border-orange-200" },
-    gpa: { bg: "bg-yellow-50 dark:bg-yellow-950/20", text: "text-yellow-600", border: "border-yellow-200" },
-    coursework: { bg: "bg-cyan-50 dark:bg-cyan-950/20", text: "text-cyan-600", border: "border-cyan-200" },
+    projects: { bg: "bg-blue-50/50 dark:bg-blue-950/20", text: "text-blue-700 dark:text-blue-400", border: "border-blue-200/50 dark:border-blue-900/50" },
+    experience: { bg: "bg-indigo-50/50 dark:bg-indigo-950/20", text: "text-indigo-700 dark:text-indigo-400", border: "border-indigo-200/50 dark:border-indigo-900/50" },
+    skills: { bg: "bg-slate-50/50 dark:bg-slate-900/50", text: "text-slate-700 dark:text-slate-400", border: "border-slate-200/50 dark:border-slate-800/50" },
+    links: { bg: "bg-zinc-50/50 dark:bg-zinc-900/50", text: "text-zinc-700 dark:text-zinc-400", border: "border-zinc-200/50 dark:border-zinc-800/50" },
+    gpa: { bg: "bg-emerald-50/50 dark:bg-emerald-950/20", text: "text-emerald-700 dark:text-emerald-400", border: "border-emerald-200/50 dark:border-emerald-900/50" },
+    coursework: { bg: "bg-sky-50/50 dark:bg-sky-950/20", text: "text-sky-700 dark:text-sky-400", border: "border-sky-200/50 dark:border-sky-900/50" },
 }
 
 const priorityIcons = {

@@ -9,9 +9,9 @@ const ResultSchema = z.object({
 })
 
 const modelPricing = {
-  "gpt-4.1-mini": {input: .4, output: 1.6},
-  "gpt-5-nano": {input: .05, output: .4},
-  "gpt-5-mini": {input: .25, output: 2.0}
+  "gpt-4.1-mini": { input: .4, output: 1.6 },
+  "gpt-5-nano": { input: .05, output: .4 },
+  "gpt-5-mini": { input: .25, output: 2.0 }
 }
 const MODEL = "gpt-4.1-mini"
 
@@ -31,12 +31,13 @@ export const extractWithChatGPT = async (content: string) => {
     const result = await client.responses.parse({
       model: MODEL,
       input: [
-        {role: "system", content: SYSTEM_PROMPT},
-        {role: "user", content: `Extract the following resume: ${content}`},
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: `Extract the following resume: ${content}` },
       ],
       text: {
         format: zodTextFormat(ResultSchema, "results")
-      }
+      },
+      temperature: 0,
     })
 
     if (result.usage) {
@@ -55,6 +56,6 @@ export const extractWithChatGPT = async (content: string) => {
     return result.output_parsed
   } catch (e) {
     console.log(e)
-    return {details: null, missing: []}
+    return { details: null, missing: [] }
   }
 }
