@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
-import { listObjectsInS3, getJsonFromS3, putJsonToS3 } from "@/lib/aws/s3"
+import { listObjectsInS3, getJsonFromS3, putJsonToS3, deleteFromS3 } from "@/lib/aws/s3"
 import { calculateResumeScore } from "@/lib/resumeScoring"
 import type { Resume } from "@/app/api/parse/resumeSchema"
 
@@ -145,6 +145,45 @@ export async function POST(request: NextRequest) {
       {
         success: false,
         error: "Failed to add resume submission",
+        message: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE - Clear all resume submissions
+export async function DELETE() {
+  try {
+    const { userId } = await auth()
+    if (!userId) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Delete the submissions metadata file
+    const metadataKey = `uploads/${userId}/submissions-metadata.json`
+    await deleteFromS3(metadataKey)
+
+    // Delete all resume files from the resumes folder
+    const resumesPrefix = `uploads/${userId}/resumes/`
+    const objects = await listObjectsInS3(resumesPrefix)
+
+    for (const obj of objects) {
+      if (obj.key !== resumesPrefix) {
+        await deleteFromS3(obj.key)
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "All submissions cleared",
+    })
+  } catch (error) {
+    console.error("Error clearing resume submissions:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to clear resume submissions",
         message: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }

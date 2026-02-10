@@ -61,36 +61,43 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    const { userId } = await auth()
+    const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json({ success: false, data: null, error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ success: false, data: null, error: "Unauthorized" }, { status: 401 });
     }
 
-    const resumeData = await getJsonFromS3<Record<string, unknown>>(`uploads/${userId}/resume-data.json`)
+    const resumeData = await getJsonFromS3<Resume>(`uploads/${userId}/resume-data.json`);
 
     if (!resumeData) {
-      return NextResponse.json({ 
-        success: false, 
+      return NextResponse.json({
+        success: false,
         data: null,
-        message: "No resume data found" 
-      })
+        message: "No resume data found"
+      });
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      data: resumeData 
-    })
+    // Calculate score and breakdown using the same logic as frontend
+    const { calculateResumeScore, getScoreBreakdown } = await import("@/lib/resumeScoring");
+    const score = calculateResumeScore(resumeData);
+    const breakdown = getScoreBreakdown(resumeData);
+
+    return NextResponse.json({
+      success: true,
+      data: resumeData,
+      score,
+      breakdown
+    });
   } catch (error) {
-    console.error("Error loading resume data:", error)
+    console.error("Error loading resume data:", error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         data: null,
         error: "Failed to load resume data",
         message: error instanceof Error ? error.message : "Unknown error"
       },
       { status: 500 }
-    )
+    );
   }
 }
 export async function DELETE() {
