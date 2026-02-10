@@ -617,7 +617,7 @@ function SkillsRadarChart({
   )
 }
 
-<<<<<<< HEAD
+
 // Technology Stack Alignment - Hidden for now
 // function TechStackAlignment() { ... }
 
@@ -628,95 +628,7 @@ interface Project {
   highlights: string[]
   link: string
   github: string
-=======
-// Technology Stack Alignment
-function TechStackAlignment() {
-  const stackData = [
-    { sector: "Full Stack Dev", match: 8, total: 12, percentage: 67 },
-    { sector: "Frontend Dev", match: 10, total: 12, percentage: 83 },
-    { sector: "AI/ML", match: 3, total: 10, percentage: 30 },
-    { sector: "Cloud Computing", match: 2, total: 10, percentage: 20 },
-  ]
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Technology Stack Alignment</CardTitle>
-        <CardDescription>Match between your skills and target tech sectors</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {stackData.map((stack) => (
-          <div key={stack.sector} className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold">{stack.sector}</p>
-                <p className="text-sm text-muted-foreground">
-                  {stack.match}/{stack.total} relevant skills ({stack.percentage}%)
-                </p>
-              </div>
-              <Badge
-                variant={stack.percentage >= 70 ? "default" : stack.percentage >= 50 ? "secondary" : "outline"}
-              >
-                {stack.percentage}%
-              </Badge>
-            </div>
-            <div className="relative h-3 w-full rounded-full overflow-hidden bg-muted">
-              <div
-                className={cn(
-                  "h-full transition-all",
-                  stack.percentage >= 70 ? "bg-green-500" : stack.percentage >= 50 ? "bg-yellow-500" : "bg-orange-500"
-                )}
-                style={{ width: `${stack.percentage}%` }}
-              />
-            </div>
-          </div>
-        ))}
-
-        <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
-          <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">Top Skills to Learn:</h4>
-          <ul className="space-y-1 text-sm text-blue-700 dark:text-blue-300">
-            <li>• AWS/Azure basics (for Cloud Computing)</li>
-            <li>• TensorFlow or PyTorch (for AI/ML)</li>
-            <li>• Docker & Kubernetes (for DevOps)</li>
-          </ul>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-interface Project {
-  name: string
-  category: "Web" | "Mobile" | "XR" | "Data" | "Other"
-  completedAt?: string
-  teamSize?: number
-  technologies?: string[]
-  description?: string
-}
-
-// Helper function to categorize project based on technologies
-function categorizeProject(technologies: string[]): Project["category"] {
-  const techString = technologies.join(" ").toLowerCase()
-  if (techString.includes("react native") || techString.includes("ios") || techString.includes("android") || techString.includes("swift") || techString.includes("kotlin")) return "Mobile"
-  if (techString.includes("vr") || techString.includes("ar") || techString.includes("unity") || techString.includes("unreal")) return "XR"
-  if (techString.includes("data") || techString.includes("ml") || techString.includes("ai") || techString.includes("pandas") || techString.includes("numpy")) return "Data"
-  if (techString.includes("react") || techString.includes("next") || techString.includes("vue") || techString.includes("angular") || techString.includes("web")) return "Web"
-  return "Other"
-}
-
-// Parse projects from resume data
-function parseProjectsFromResume(resumeData: any): Project[] {
-  if (!resumeData?.projects || resumeData.projects.length === 0) return []
-
-  return resumeData.projects.map((project: any) => ({
-    name: project.name || "Unnamed Project",
-    category: categorizeProject(project.technologies || []),
-    completedAt: undefined, // Resume schema doesn't have project completion date
-    teamSize: undefined, // Resume schema doesn't have team size
-    technologies: project.technologies || [],
-    description: project.description || "",
-  }))
->>>>>>> 70d30f20b853c56310df4ce167c543e5508d4835
 }
 
 // Map role types and tech sectors to project categories for relevance scoring
@@ -903,74 +815,55 @@ function ProjectPortfolioSummary({
         </div>
 
         {/* Project List */}
-<<<<<<< HEAD
-  <div className="space-y-3 max-h-80 overflow-y-auto">
-    {projects.length === 0 ? (
-      <div className="text-center py-8 text-muted-foreground">
-        <FolderKanban className="h-12 w-12 mx-auto mb-3 opacity-50" />
-        <p>No projects found in your resume</p>
-        <p className="text-sm mt-1">Add projects to showcase your hands-on experience!</p>
-=======
-        <div className="space-y-2 max-h-64 overflow-y-auto">
-          {projects.map((p, i) => (
-            <div
-              key={i}
-              className="p-2 border rounded-lg flex flex-col bg-muted/5 dark:bg-muted/20"
-            >
-              <p className="font-semibold">{p.name}</p>
-              <p className="text-xs text-muted-foreground">
-                Category: {p.category}
-                {p.technologies && p.technologies.length > 0 && (
-                  <> | Tech: {p.technologies.slice(0, 3).join(", ")}{p.technologies.length > 3 ? "..." : ""}</>
-                )}
-              </p>
-              {p.description && (
-                <p className="text-xs text-muted-foreground mt-1">{p.description}</p>
-              )}
->>>>>>> 70d30f20b853c56310df4ce167c543e5508d4835
+        <div className="space-y-3 max-h-80 overflow-y-auto">
+          {projects.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <FolderKanban className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p>No projects found in your resume</p>
+              <p className="text-sm mt-1">Add projects to showcase your hands-on experience!</p>
             </div>
           ) : (
             projects.map((p, i) => (
-          <div
-            key={i}
-            className="p-3 border rounded-lg bg-muted/5 dark:bg-muted/20 space-y-2"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="font-semibold">{p.name}</p>
-                {p.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{p.description}</p>
+              <div
+                key={i}
+                className="p-3 border rounded-lg bg-muted/5 dark:bg-muted/20 space-y-2"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-semibold">{p.name}</p>
+                    {p.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{p.description}</p>
+                    )}
+                  </div>
+                </div>
+                {p.technologies.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {p.technologies.slice(0, 6).map((tech, idx) => (
+                      <Badge key={idx} variant="secondary" className="text-xs">
+                        {tech}
+                      </Badge>
+                    ))}
+                    {p.technologies.length > 6 && (
+                      <Badge variant="secondary" className="text-xs">+{p.technologies.length - 6}</Badge>
+                    )}
+                  </div>
+                )}
+                {(p.github || p.link) && (
+                  <div className="flex gap-3 text-xs">
+                    {p.github && (
+                      <a href={p.github} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-muted-foreground hover:text-foreground">
+                        <Github className="h-3 w-3" /> GitHub
+                      </a>
+                    )}
+                    {p.link && (
+                      <a href={p.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-muted-foreground hover:text-foreground">
+                        <Globe className="h-3 w-3" /> Live Demo
+                      </a>
+                    )}
+                  </div>
                 )}
               </div>
-            </div>
-            {p.technologies.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {p.technologies.slice(0, 6).map((tech, idx) => (
-                  <Badge key={idx} variant="secondary" className="text-xs">
-                    {tech}
-                  </Badge>
-                ))}
-                {p.technologies.length > 6 && (
-                  <Badge variant="secondary" className="text-xs">+{p.technologies.length - 6}</Badge>
-                )}
-              </div>
-            )}
-            {(p.github || p.link) && (
-              <div className="flex gap-3 text-xs">
-                {p.github && (
-                  <a href={p.github} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-muted-foreground hover:text-foreground">
-                    <Github className="h-3 w-3" /> GitHub
-                  </a>
-                )}
-                {p.link && (
-                  <a href={p.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-muted-foreground hover:text-foreground">
-                    <Globe className="h-3 w-3" /> Live Demo
-                  </a>
-                )}
-              </div>
-            )}
-          </div>
-          ))
+            ))
           )}
         </div>
       </CardContent>
