@@ -7,7 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import {
   TrendingUp, Target, Check, Github, Linkedin, Globe, Briefcase, Award, Users, X,
-  GraduationCap, FolderKanban, Building2, Code, Database, Cloud, Cpu, Star, FileText
+  GraduationCap, FolderKanban, Building2, Code, Database, Cloud, Cpu, Star, FileText,
+  ChevronDown, ChevronUp
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { CareerPathCourseworkChart } from "@/components/career-path-radar"
@@ -28,6 +29,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import type { QuestionnaireData } from "@/app/questionnaire/data"
+import { ActionableInsights } from "@/components/actionable-insights"
+import { calculateResumeScoreDetailed, getScoreStatus, getImprovementMessage, type ResumeScoreResult } from "@/lib/resumeScoring"
 
 // Mock data - replace with actual resume data later
 const mockStudentData = {
@@ -881,6 +884,7 @@ interface ResumeScoreProps {
   courseworkCategories?: number // number of distinct CS categories
   roleTypes?: string[]
   techSectors?: string[]
+  resumeData?: any
 }
 
 function OverallResumeScore({
@@ -891,236 +895,122 @@ function OverallResumeScore({
   internships,
   courseworkCategories = 0,
   roleTypes = [],
-  techSectors = []
+  techSectors = [],
+  resumeData
 }: ResumeScoreProps) {
-  // Weights for each component (total = 100)
-  const WEIGHTS = {
-    coursework: 5,       // Small impact
-    skills: 20,          // Somewhat important
-    resumeCompleteness: 15, // Somewhat important
-    gpa: 15,             // Decent
-    projects: 25,        // Important
-    internships: 20,     // Important
-  }
+  // Use new scoring system if resumeData is available
+  const scoreResult: ResumeScoreResult | null = resumeData ? calculateResumeScoreDetailed(resumeData) : null
 
-  // 1. Coursework Score (0-100, then weighted)
-  const courseworkScore = Math.min(courseworkCategories * 20, 100)
-
-  // 2. Skills Portfolio Score (general coverage + count)
-  const calculateSkillsScore = () => {
-    const counts = {
-      languages: skills.programmingLanguages.length,
-      frameworks: skills.frameworks.length,
-      databases: skills.databases.length,
-      devops: skills.devops.length,
-      certs: skills.certifications.length,
-    }
-
-    // Coverage: how many categories have at least 1 skill (max 5 categories)
-    const coveredCategories = Object.values(counts).filter(c => c > 0).length
-    const coverageScore = (coveredCategories / 5) * 50
-
-    // Count: total skills (diminishing returns)
-    const totalSkills = Object.values(counts).reduce((a, b) => a + b, 0)
-    const countScore = Math.min(totalSkills * 3, 50)
-
-    return Math.round(coverageScore + countScore)
-  }
-  const skillsScore = calculateSkillsScore()
-
-  // 3. Resume Completeness Score
-  const calculateCompletenessScore = () => {
-    const criteria = [
-      { value: resume.hasGithub, points: 15 },
-      { value: resume.hasLinkedIn, points: 10 },
-      { value: resume.hasPortfolio, points: 15 },
-      { value: resume.hasProjects, points: 20 },
-      { value: resume.hasExperience, points: 20 },
-      { value: resume.hasCertifications, points: 10 },
-      { value: resume.hasExtracurriculars, points: 10 },
-    ]
-    return criteria.reduce((sum, item) => sum + (item.value ? item.points : 0), 0)
-  }
-  const completenessScore = calculateCompletenessScore()
-
-  // 4. GPA Score (scaled from 2.5-4.0 range to 0-100)
-  const calculateGpaScore = () => {
-    if (gpa === 0) return 0
-    const MIN_GPA = 2.5
-    const MAX_GPA = 4.0
-    const normalized = Math.max(0, Math.min(1, (gpa - MIN_GPA) / (MAX_GPA - MIN_GPA)))
-    return Math.round(normalized * 100)
-  }
-  const gpaScore = calculateGpaScore()
-
-  // 5. Project Portfolio Score (count + diversity + relevance)
-  const calculateProjectScore = () => {
-    if (projects.length === 0) return 0
-
-    const categorizeProject = (tech: string[]): string => {
-      const techLower = tech.map(t => t.toLowerCase())
-      if (techLower.some(t => t.includes('react native') || t.includes('flutter') || t.includes('swift') || t.includes('kotlin'))) return 'Mobile'
-      if (techLower.some(t => t.includes('tensorflow') || t.includes('pytorch') || t.includes('pandas') || t.includes('machine learning'))) return 'Data/ML'
-      if (techLower.some(t => t.includes('react') || t.includes('vue') || t.includes('angular') || t.includes('next') || t.includes('node'))) return 'Web'
-      return 'Other'
-    }
-
-    const categories = new Set(projects.map(p => categorizeProject(p.technologies)))
-    const diversity = categories.size
-
-    // Base score from count (max 40)
-    let score = Math.min(projects.length * 10, 40)
-    // Diversity bonus (max 20)
-    score += Math.min(diversity * 10, 20)
-    // Relevance bonus if matching target roles (max 40)
-    const relevantCategories = new Set<string>()
-    roleTypes.forEach(role => roleToCategories[role]?.forEach(cat => relevantCategories.add(cat)))
-    techSectors.forEach(sector => sectorToCategories[sector]?.forEach(cat => relevantCategories.add(cat)))
-
-    if (relevantCategories.size > 0) {
-      const relevantCount = projects.filter(p => relevantCategories.has(categorizeProject(p.technologies))).length
-      score += Math.round((relevantCount / projects.length) * 40)
-    } else {
-      score += 20
-    }
-
-    return Math.min(score, 100)
-  }
-  const projectScore = calculateProjectScore()
-
-  // 6. Internship Score (count + relevance)
-  const calculateInternshipScore = () => {
-    if (internships.length === 0) return 0
-
-    // Base score from count
-    let score = Math.min(internships.length * 35, 70)
-
-    // Relevance bonus
-    if (roleTypes.length > 0) {
-      const calculateRelevance = (exp: Experience): boolean => {
-        const expText = [exp.position, exp.company, ...exp.responsibilities, ...exp.technologies].join(' ').toLowerCase()
-        return roleTypes.some(role => {
-          const keywords = roleKeywords[role] || []
-          return keywords.some(keyword => expText.includes(keyword))
-        })
-      }
-      const relevantCount = internships.filter(calculateRelevance).length
-      score += Math.round((relevantCount / internships.length) * 30)
-    } else {
-      score += 15
-    }
-
-    return Math.min(score, 100)
-  }
-  const internshipScore = calculateInternshipScore()
-
-  // Calculate weighted total
-  const totalScore = Math.round(
-    (courseworkScore * WEIGHTS.coursework +
-      skillsScore * WEIGHTS.skills +
-      completenessScore * WEIGHTS.resumeCompleteness +
-      gpaScore * WEIGHTS.gpa +
-      projectScore * WEIGHTS.projects +
-      internshipScore * WEIGHTS.internships) / 100
-  )
-
-  const getScoreStatus = (score: number) => {
-    if (score >= 80) return { label: "Excellent", color: "text-emerald-600", bgColor: "bg-emerald-500" }
-    if (score >= 65) return { label: "Very Good", color: "text-green-600", bgColor: "bg-green-500" }
-    if (score >= 50) return { label: "Good", color: "text-blue-600", bgColor: "bg-blue-500" }
-    if (score >= 35) return { label: "Fair", color: "text-amber-600", bgColor: "bg-amber-500" }
-    return { label: "Needs Work", color: "text-red-600", bgColor: "bg-red-500" }
-  }
-
+  // Fall back to old scoring if no resumeData
+  const totalScore = scoreResult?.totalScore ?? 0
   const status = getScoreStatus(totalScore)
   const circumference = 2 * Math.PI * 70
   const strokeDashoffset = circumference - (totalScore / 100) * circumference
 
-  const scoreBreakdown = [
-    { label: "Projects", score: projectScore, weight: WEIGHTS.projects, icon: FolderKanban, color: "text-purple-500", bgColor: "bg-purple-500" },
-    { label: "Internships", score: internshipScore, weight: WEIGHTS.internships, icon: Briefcase, color: "text-blue-500", bgColor: "bg-blue-500" },
-    { label: "Skills", score: skillsScore, weight: WEIGHTS.skills, icon: Code, color: "text-green-500", bgColor: "bg-green-500" },
-    { label: "Resume", score: completenessScore, weight: WEIGHTS.resumeCompleteness, icon: FileText, color: "text-orange-500", bgColor: "bg-orange-500" },
-    { label: "GPA", score: gpaScore, weight: WEIGHTS.gpa, icon: GraduationCap, color: "text-yellow-500", bgColor: "bg-yellow-500" },
-    { label: "Coursework", score: courseworkScore, weight: WEIGHTS.coursework, icon: Database, color: "text-cyan-500", bgColor: "bg-cyan-500" },
-  ]
+  // Icon mapping for categories
+  const categoryIcons: Record<string, typeof FolderKanban> = {
+    'Projects': FolderKanban,
+    'Experience': Briefcase,
+    'Skills': Code,
+    'Links + Contact': Globe,
+    'GPA': GraduationCap,
+    'Coursework': Database,
+  }
+
+  const categoryColors: Record<string, { color: string; bgColor: string }> = {
+    'Projects': { color: 'text-purple-500', bgColor: 'bg-purple-500' },
+    'Experience': { color: 'text-blue-500', bgColor: 'bg-blue-500' },
+    'Skills': { color: 'text-green-500', bgColor: 'bg-green-500' },
+    'Links + Contact': { color: 'text-orange-500', bgColor: 'bg-orange-500' },
+    'GPA': { color: 'text-yellow-500', bgColor: 'bg-yellow-500' },
+    'Coursework': { color: 'text-cyan-500', bgColor: 'bg-cyan-500' },
+  }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Resume Score</CardTitle>
-            <CardDescription>Overall strength of your resume based on multiple factors</CardDescription>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Resume Score</CardTitle>
+              <CardDescription>Overall strength based on quality & quantity metrics</CardDescription>
+            </div>
+            <Badge variant="outline" className={status.color}>
+              {status.label}
+            </Badge>
           </div>
-          <Badge variant="outline" className={status.color}>
-            {status.label}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="grid md:grid-cols-2 gap-8">
-          {/* Score Circle */}
-          <div className="flex flex-col items-center justify-center">
-            <div className="relative w-48 h-48">
-              <svg className="w-full h-full transform -rotate-90">
-                <circle cx="96" cy="96" r="70" stroke="currentColor" strokeWidth="12" fill="none" className="text-muted" />
-                <circle
-                  cx="96" cy="96" r="70" stroke="currentColor" strokeWidth="12" fill="none"
-                  strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round"
-                  className={cn("transition-all duration-1000 ease-out", status.bgColor)}
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-5xl font-bold">{totalScore}</span>
-                <span className="text-sm text-muted-foreground">out of 100</span>
+        </CardHeader>
+        <CardContent>
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Score Circle */}
+            <div className="flex flex-col items-center justify-center">
+              <div className="relative w-48 h-48">
+                <svg className="w-full h-full transform -rotate-90">
+                  <circle cx="96" cy="96" r="70" stroke="currentColor" strokeWidth="12" fill="none" className="text-muted" />
+                  <circle
+                    cx="96" cy="96" r="70" stroke="currentColor" strokeWidth="12" fill="none"
+                    strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round"
+                    className={cn("transition-all duration-1000 ease-out", status.bgColor)}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-5xl font-bold">{totalScore}</span>
+                  <span className="text-sm text-muted-foreground">out of 100</span>
+                </div>
               </div>
+            </div>
+
+            {/* Score Breakdown with Quality + Quantity */}
+            <div className="space-y-3">
+              {scoreResult?.breakdown.map((item) => {
+                const Icon = categoryIcons[item.category] || Database
+                const colors = categoryColors[item.category] || { color: 'text-muted', bgColor: 'bg-muted' }
+                return (
+                  <div key={item.category} className="flex items-center gap-3">
+                    <Icon className={cn("h-5 w-5", colors.color)} />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium">{item.category}</span>
+                        <span className="text-muted-foreground">
+                          {item.combinedScore}/100 <span className="text-xs">({item.weight}%)</span>
+                        </span>
+                      </div>
+                      <div className="relative h-2 w-full rounded-full overflow-hidden bg-muted mt-1">
+                        <div
+                          className={cn("h-full transition-all", colors.bgColor)}
+                          style={{ width: `${item.combinedScore}%` }}
+                        />
+                      </div>
+                      {/* Quality vs Quantity mini-labels */}
+                      <div className="flex justify-between text-xs text-muted-foreground mt-0.5">
+                        <span>Q: {item.qualityScore}</span>
+                        <span>Qty: {item.quantityScore}</span>
+                      </div>
+                    </div>
+                    <span className="text-sm font-semibold w-8 text-right">+{item.contribution}</span>
+                  </div>
+                )
+              })}
             </div>
           </div>
 
-          {/* Score Breakdown */}
-          <div className="space-y-3">
-            {scoreBreakdown.map((item) => {
-              const Icon = item.icon
-              const contribution = Math.round((item.score * item.weight) / 100)
-              return (
-                <div key={item.label} className="flex items-center gap-3">
-                  <Icon className={cn("h-5 w-5", item.color)} />
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium">{item.label}</span>
-                      <span className="text-muted-foreground">
-                        {item.score}/100 <span className="text-xs">({item.weight}%)</span>
-                      </span>
-                    </div>
-                    <div className="relative h-2 w-full rounded-full overflow-hidden bg-muted mt-1">
-                      <div
-                        className={cn("h-full transition-all", item.bgColor)}
-                        style={{ width: `${item.score}%` }}
-                      />
-                    </div>
-                  </div>
-                  <span className="text-sm font-semibold w-8 text-right">+{contribution}</span>
-                </div>
-              )
-            })}
+          {/* How to improve section */}
+          <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">How to improve: </span>
+              {scoreResult ? getImprovementMessage(totalScore, scoreResult.breakdown) : (
+                "Upload a resume to get personalized improvement suggestions."
+              )}
+            </p>
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-          <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">How to improve: </span>
-            {totalScore < 50 ? (
-              "Focus on adding projects and gaining internship experience. These carry the most weight in your score."
-            ) : totalScore < 70 ? (
-              "You're on the right track! Consider diversifying your skills and adding more relevant projects."
-            ) : (
-              "Excellent progress! Keep maintaining your momentum and consider targeting more specialized experiences."
-            )}
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+      {/* Actionable Insights - Now part of the score section */}
+      {scoreResult && scoreResult.insights.length > 0 && (
+        <ActionableInsights insights={scoreResult.insights} />
+      )}
+    </div>
   )
 }
 
@@ -1400,17 +1290,6 @@ function InternshipSummary({
                       isRelevant && roleTypes.length > 0 && "border-primary/30"
                     )}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="font-semibold">{exp.position}</p>
-                        <p className="text-sm text-muted-foreground">{exp.company} • {exp.location}</p>
-                      </div>
-                      {isRelevant && roleTypes.length > 0 && (
-                        <Badge variant="outline" className="shrink-0 border-primary/50 text-primary">
-                          <Target className="h-3 w-3 mr-1" /> Relevant
-                        </Badge>
-                      )}
-                    </div>
                     <p className="text-xs text-muted-foreground">
                       {new Date(exp.start_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                       {" — "}
@@ -1454,28 +1333,35 @@ function JobPreferencesSummary({ preferences }: { preferences: QuestionnaireData
         <CardTitle>Job Preferences Snapshot</CardTitle>
         <CardDescription>Highlights from your latest questionnaire</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {sections.map((section) => (
-          <div key={section.label} className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">{section.label}</p>
-            {section.values.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {section.values.slice(0, 6).map((value) => (
-                  <Badge key={`${section.label}-${value}`} variant="secondary">
-                    {value}
-                  </Badge>
-                ))}
-                {section.values.length > 6 && (
-                  <span className="text-xs text-muted-foreground">
-                    +{section.values.length - 6} more
-                  </span>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No selections yet</p>
-            )}
-          </div>
-        ))}
+      <CardContent>
+        {/* Column-based layout instead of row-based badges */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {sections.map((section) => (
+            <div key={section.label} className="space-y-2">
+              <h4 className="text-sm font-semibold text-foreground border-b pb-1">{section.label}</h4>
+              {section.values.length > 0 ? (
+                <ul className="space-y-1">
+                  {section.values.slice(0, 5).map((value) => (
+                    <li
+                      key={`${section.label}-${value}`}
+                      className="text-sm text-muted-foreground flex items-start gap-2"
+                    >
+                      <Check className="h-3 w-3 mt-1 text-green-500 flex-shrink-0" />
+                      <span className="line-clamp-2">{value}</span>
+                    </li>
+                  ))}
+                  {section.values.length > 5 && (
+                    <li className="text-xs text-muted-foreground/70 italic pl-5">
+                      +{section.values.length - 5} more
+                    </li>
+                  )}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">Not set</p>
+              )}
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   )
@@ -1551,6 +1437,22 @@ const roleRequiredSkills: Record<string, { languages: string[], frameworks: stri
   },
 }
 
+interface CategoryBreakdown {
+  category: string
+  matched: string[]
+  missing: string[]
+  required: string[]
+}
+
+interface RoleMatchData {
+  role: string
+  matched: number
+  total: number
+  percentage: number
+  matchedSkills: string[]
+  missingSkills: string[]
+  categoryBreakdown: CategoryBreakdown[]
+}
 function RoleSkillsMatch({
   skills,
   roleTypes = []
@@ -1558,6 +1460,7 @@ function RoleSkillsMatch({
   skills: typeof mockStudentData.skills
   roleTypes?: string[]
 }) {
+  const [expandedRole, setExpandedRole] = useState<string | null>(null)
   const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"]
 
   // Get all user skills as lowercase for matching
@@ -1568,10 +1471,40 @@ function RoleSkillsMatch({
     ...skills.devops
   ].map(s => s.toLowerCase())
 
-  // Calculate match for each role
-  const calculateRoleMatch = (role: string): { matched: number, total: number, matchedSkills: string[] } => {
+  // Calculate match for each role with category breakdown
+  const calculateRoleMatch = (role: string): RoleMatchData => {
     const required = roleRequiredSkills[role]
-    if (!required) return { matched: 0, total: 0, matchedSkills: [] }
+    if (!required) return {
+      role,
+      matched: 0,
+      total: 0,
+      percentage: 0,
+      matchedSkills: [],
+      missingSkills: [],
+      categoryBreakdown: []
+    }
+
+    const categories = [
+      { name: "Languages", required: required.languages, userCategory: skills.programmingLanguages },
+      { name: "Frameworks", required: required.frameworks, userCategory: skills.frameworks },
+      { name: "Databases", required: required.databases, userCategory: skills.databases },
+      { name: "DevOps", required: required.devops, userCategory: skills.devops },
+    ]
+
+    const categoryBreakdown: CategoryBreakdown[] = categories.map(cat => {
+      const matched = cat.required.filter(req =>
+        userSkills.some(skill => skill.includes(req) || req.includes(skill))
+      )
+      const missing = cat.required.filter(req =>
+        !userSkills.some(skill => skill.includes(req) || req.includes(skill))
+      )
+      return {
+        category: cat.name,
+        matched,
+        missing,
+        required: cat.required
+      }
+    }).filter(cat => cat.required.length > 0)
 
     const allRequired = [
       ...required.languages,
@@ -1583,20 +1516,26 @@ function RoleSkillsMatch({
     const matchedSkills = allRequired.filter(req =>
       userSkills.some(skill => skill.includes(req) || req.includes(skill))
     )
+    const missingSkills = allRequired.filter(req =>
+      !userSkills.some(skill => skill.includes(req) || req.includes(skill))
+    )
+
+    const percentage = allRequired.length > 0 ? Math.round((matchedSkills.length / allRequired.length) * 100) : 0
 
     return {
+      role,
       matched: matchedSkills.length,
       total: allRequired.length,
-      matchedSkills
+      percentage,
+      matchedSkills,
+      missingSkills,
+      categoryBreakdown
     }
   }
 
   // Calculate matches for all roles and sort by match percentage
-  const allRoleMatches = Object.keys(roleRequiredSkills).map(role => {
-    const { matched, total, matchedSkills } = calculateRoleMatch(role)
-    const percentage = total > 0 ? Math.round((matched / total) * 100) : 0
-    return { role, matched, total, percentage, matchedSkills }
-  }).sort((a, b) => b.percentage - a.percentage)
+  const allRoleMatches = Object.keys(roleRequiredSkills).map(role => calculateRoleMatch(role))
+    .sort((a, b) => b.percentage - a.percentage)
 
   // Get top 3 roles
   const topRoles = allRoleMatches.slice(0, 3)
@@ -1604,12 +1543,22 @@ function RoleSkillsMatch({
   // Check if any target roles are in top 3
   const targetRolesInTop = roleTypes.filter(r => topRoles.some(tr => tr.role === r))
 
+  const toggleExpanded = (role: string) => {
+    setExpandedRole(expandedRole === role ? null : role)
+  }
+
+  // Transform data for pie chart
+  const chartData = topRoles.map(r => ({
+    role: r.role,
+    percentage: r.percentage
+  }))
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Role-Relevant Skills Match</CardTitle>
         <CardDescription>
-          Top 3 fields that best match your extracted skills
+          Top 3 fields that best match your extracted skills. Click to see details.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -1618,7 +1567,7 @@ function RoleSkillsMatch({
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={topRoles}
+                  data={chartData}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
@@ -1628,7 +1577,7 @@ function RoleSkillsMatch({
                   dataKey="percentage"
                   label={(entry) => `${entry.percentage}%`}
                 >
-                  {topRoles.map((entry, index) => (
+                  {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -1640,32 +1589,101 @@ function RoleSkillsMatch({
           <div className="space-y-4">
             {topRoles.map((role, index) => {
               const isTargetRole = roleTypes.includes(role.role)
+              const isExpanded = expandedRole === role.role
               return (
                 <div key={role.role} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: COLORS[index] }}
-                      />
-                      <span className="font-semibold">{role.role}</span>
-                      {isTargetRole && (
-                        <Badge variant="outline" className="text-xs border-primary text-primary">
-                          <Target className="h-3 w-3 mr-1" /> Target
-                        </Badge>
-                      )}
+                  <button
+                    onClick={() => toggleExpanded(role.role)}
+                    className="w-full text-left"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: COLORS[index] }}
+                        />
+                        <span className="font-semibold">{role.role}</span>
+                        {isTargetRole && (
+                          <Badge variant="outline" className="text-xs border-primary text-primary">
+                            <Target className="h-3 w-3 mr-1" /> Target
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge>{role.percentage}%</Badge>
+                        {isExpanded ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
                     </div>
-                    <Badge>{role.percentage}%</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground pl-5">
-                    {role.matched}/{role.total} skills matched
-                  </p>
-                  <div className="relative h-2 w-full rounded-full overflow-hidden bg-muted pl-5">
+                    <p className="text-sm text-muted-foreground pl-5">
+                      {role.matched}/{role.total} skills matched
+                    </p>
+                  </button>
+                  <div className="relative h-2 w-full rounded-full overflow-hidden bg-muted ml-5">
                     <div
                       className="h-full transition-all"
                       style={{ width: `${role.percentage}%`, backgroundColor: COLORS[index] }}
                     />
                   </div>
+
+                  {/* Expanded skill details */}
+                  {isExpanded && (
+                    <div className="ml-5 mt-3 space-y-3 border-l-2 pl-4" style={{ borderColor: COLORS[index] }}>
+                      {role.categoryBreakdown.map((cat) => (
+                        <div key={cat.category} className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">{cat.category}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {cat.matched.length}/{cat.required.length}
+                            </span>
+                          </div>
+
+                          {/* Matched skills */}
+                          {cat.matched.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {cat.matched.map((skill) => (
+                                <Badge
+                                  key={skill}
+                                  variant="outline"
+                                  className="text-xs bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-800 text-green-700 dark:text-green-400"
+                                >
+                                  <Check className="h-3 w-3 mr-1" />
+                                  {skill}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Missing skills */}
+                          {cat.missing.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {cat.missing.map((skill) => (
+                                <Badge
+                                  key={skill}
+                                  variant="outline"
+                                  className="text-xs bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-800 text-red-700 dark:text-red-400"
+                                >
+                                  <X className="h-3 w-3 mr-1" />
+                                  {skill}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+
+                      {/* Summary */}
+                      <div className="pt-2 border-t">
+                        <p className="text-xs text-muted-foreground">
+                          <span className="font-medium text-green-600 dark:text-green-400">{role.matched} skills</span> matched,
+                          <span className="font-medium text-red-600 dark:text-red-400 ml-1">{role.missingSkills.length} skills</span> to learn
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -1686,11 +1704,40 @@ function RoleSkillsMatch({
 }
 
 
+
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("overall")
-  const { resumeData, isLoading, currentFileName } = useResume()
-
+  const [resumeData, setResumeData] = useState<any>(null)
+  const [score, setScore] = useState<number | null>(null)
+  const [breakdown, setBreakdown] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [currentFileName, setCurrentFileName] = useState<string | null>(null)
   const [questionnaireData, setQuestionnaireData] = useState<QuestionnaireData | null>(null)
+
+  useEffect(() => {
+    let isMounted = true
+    const loadResume = async () => {
+      setIsLoading(true)
+      try {
+        const response = await fetch("/api/resume")
+        const result = await response.json()
+        if (isMounted && result.success && result.data) {
+          setResumeData(result.data)
+          setScore(result.score)
+          setBreakdown(result.breakdown)
+        }
+      } catch (error) {
+        // fallback to mock data if needed
+        setResumeData(null)
+        setScore(null)
+        setBreakdown(null)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    loadResume()
+    return () => { isMounted = false }
+  }, [])
 
   useEffect(() => {
     let isMounted = true
@@ -1712,9 +1759,7 @@ export default function DashboardPage() {
       }
     }
     loadPreferences()
-    return () => {
-      isMounted = false
-    }
+    return () => { isMounted = false }
   }, [])
 
   // Extract data from resume or use mock data
@@ -1724,7 +1769,7 @@ export default function DashboardPage() {
       resumeData.education?.[0]?.end_date,
       resumeData.education?.[0]?.start_date
     ),
-    internshipCount: resumeData.experience?.filter(exp =>
+    internshipCount: resumeData.experience?.filter((exp: any) =>
       exp.position.toLowerCase().includes('intern')
     ).length || 0,
     projectCount: resumeData.projects?.length || 0,
@@ -1733,17 +1778,9 @@ export default function DashboardPage() {
       frameworks: resumeData.skills?.frameworks || [],
       databases: resumeData.skills?.databases || [],
       devops: resumeData.skills?.devops_tools || [],
-      certifications: resumeData.certifications?.map(cert => cert.name) || [],
+      certifications: resumeData.certifications?.map((cert: any) => cert.name) || [],
     },
-    resume: {
-      hasGithub: !!resumeData.basics?.github,
-      hasLinkedIn: !!resumeData.basics?.linkedin,
-      hasPortfolio: !!resumeData.basics?.portfolio,
-      hasProjects: (resumeData.projects?.length || 0) > 0,
-      hasExperience: (resumeData.experience?.length || 0) > 0,
-      hasCertifications: (resumeData.certifications?.length || 0) > 0,
-      hasExtracurriculars: (resumeData.extracurriculars?.length || 0) > 0,
-    },
+    resume: breakdown || mockStudentData.resume,
   } : mockStudentData
 
   // Parse projects and experience from resume data
@@ -1847,7 +1884,10 @@ export default function DashboardPage() {
           </TabsList>
 
           <TabsContent value="overall" className="space-y-6">
-            {/* Resume Score - Always visible at top */}
+            {/* Job Preferences - Now first (swapped with Resume Score) */}
+            {questionnaireData && <JobPreferencesSummary preferences={questionnaireData} />}
+
+            {/* Resume Score - Now second */}
             <OverallResumeScore
               gpa={studentData.gpa}
               skills={studentData.skills}
@@ -1857,9 +1897,10 @@ export default function DashboardPage() {
               courseworkCategories={3} // TODO: Calculate from actual coursework data
               roleTypes={questionnaireData?.roleTypes}
               techSectors={questionnaireData?.techSectors}
+              resumeData={resumeData}
             />
 
-            {questionnaireData && <JobPreferencesSummary preferences={questionnaireData} />}
+
             <Accordion type="multiple" className="space-y-4" defaultValue={["coursework", "skills-overview", "tech-overview", "resume-overview"]}>
               <AccordionItem value="coursework" className="border rounded-lg px-4">
                 <AccordionTrigger className="hover:no-underline">

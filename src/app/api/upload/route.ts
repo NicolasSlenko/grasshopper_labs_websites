@@ -94,8 +94,8 @@ export async function POST(request: NextRequest) {
       fileName: file.name,
       s3Key: key,
       uploadedAt: new Date().toISOString(),
-      // Generate a random score between 50-95 for now
-      score: Math.floor(Math.random() * 46) + 50,
+      // Score starts at 0, will be calculated after parsing
+      score: 0,
     }
 
     if (!metadata) {
