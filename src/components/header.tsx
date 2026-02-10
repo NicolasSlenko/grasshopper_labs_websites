@@ -16,24 +16,6 @@ import { cn } from "@/lib/utils"
 export function Header() {
   const pathname = usePathname()
 
-  const isActive = (path: string) => pathname === path
-
-  const NavButton = ({ href, icon: Icon, label }: { href: string; icon: any; label: string }) => (
-    <Button
-      variant={isActive(href) ? "secondary" : "ghost"}
-      className={cn(
-        "gap-2",
-        isActive(href) && "bg-muted font-medium"
-      )}
-      asChild
-    >
-      <Link href={href}>
-        <Icon className="h-4 w-4" />
-        {label}
-      </Link>
-    </Button>
-  )
-
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4">
@@ -107,5 +89,26 @@ export function Header() {
         </div>
       </div>
     </header>
+  )
+}
+
+function NavButton({ href, icon: Icon, label }: { href: string; icon: any; label: string }) {
+  const pathname = usePathname()
+  const isActive = pathname === href
+
+  return (
+    <Button
+      variant={isActive ? "secondary" : "ghost"}
+      className={cn(
+        "gap-2",
+        isActive && "bg-muted font-medium"
+      )}
+      asChild
+    >
+      <Link href={href}>
+        <Icon className="h-4 w-4" />
+        {label}
+      </Link>
+    </Button>
   )
 }
