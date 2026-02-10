@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { 
+import {
   TrendingUp, Target, Check, Github, Linkedin, Globe, Briefcase, Award, Users, X,
   GraduationCap, FolderKanban, Building2, Code, Database, Cloud, Cpu, Star, FileText
 } from "lucide-react"
@@ -58,31 +58,31 @@ const INTERNSHIP_AVG_GPA = 3.6
 // Helper function to calculate year in school from start and end dates
 function calculateYearInSchool(endDate?: string, startDate?: string): number {
   if (!endDate) return 1
-  
+
   const gradDate = new Date(endDate)
   const now = new Date()
-  
+
   // If they've already graduated
   if (gradDate < now) return 4
-  
+
   // Calculate based on start date if available
   if (startDate) {
     const startDateObj = new Date(startDate)
-    
+
     // Calculate how many months have passed since starting
-    const monthsSinceStart = (now.getFullYear() - startDateObj.getFullYear()) * 12 + 
-                            (now.getMonth() - startDateObj.getMonth())
-    
+    const monthsSinceStart = (now.getFullYear() - startDateObj.getFullYear()) * 12 +
+      (now.getMonth() - startDateObj.getMonth())
+
     // Determine year based on months (assuming typical 4-year program)
     if (monthsSinceStart < 12) return 1      // Freshman (0-12 months)
     if (monthsSinceStart < 24) return 2      // Sophomore (12-24 months)
     if (monthsSinceStart < 36) return 3      // Junior (24-36 months)
     return 4                                  // Senior (36+ months)
   }
-  
+
   // Fallback: calculate from graduation date
   const yearsUntilGrad = gradDate.getFullYear() - now.getFullYear()
-  
+
   if (yearsUntilGrad <= 0) return 4           // Graduating this year or graduated
   if (yearsUntilGrad === 1) return 3          // Junior
   if (yearsUntilGrad === 2) return 2          // Sophomore
@@ -480,10 +480,10 @@ function getSuggestionsForRoles(roleTypes: string[]): {
 }
 
 // Skills Radar Chart
-function SkillsRadarChart({ 
-  skills, 
-  roleTypes = [] 
-}: { 
+function SkillsRadarChart({
+  skills,
+  roleTypes = []
+}: {
   skills: typeof mockStudentData.skills
   roleTypes?: string[]
 }) {
@@ -496,13 +496,13 @@ function SkillsRadarChart({
     { category: "Certifications", count: skills.certifications.length, fullMark: 5 },
   ]
 
-  const SkillSection = ({ 
-    title, 
-    icon: Icon, 
-    iconColor, 
-    items, 
-    suggestedItems 
-  }: { 
+  const SkillSection = ({
+    title,
+    icon: Icon,
+    iconColor,
+    items,
+    suggestedItems
+  }: {
     title: string
     icon: React.ElementType
     iconColor: string
@@ -510,7 +510,7 @@ function SkillsRadarChart({
     suggestedItems: string[]
   }) => {
     const hasSuggestions = items.length === 0 && suggestedItems.length > 0
-    
+
     return (
       <div className="p-4 border rounded-lg space-y-2">
         <div className="flex items-center justify-between">
@@ -520,7 +520,7 @@ function SkillsRadarChart({
           </div>
           <Badge variant="secondary">{items.length}</Badge>
         </div>
-        
+
         {items.length > 0 ? (
           <div className="flex flex-wrap gap-1.5 mt-2">
             {items.map((item, idx) => (
@@ -617,6 +617,7 @@ function SkillsRadarChart({
   )
 }
 
+<<<<<<< HEAD
 // Technology Stack Alignment - Hidden for now
 // function TechStackAlignment() { ... }
 
@@ -627,6 +628,95 @@ interface Project {
   highlights: string[]
   link: string
   github: string
+=======
+// Technology Stack Alignment
+function TechStackAlignment() {
+  const stackData = [
+    { sector: "Full Stack Dev", match: 8, total: 12, percentage: 67 },
+    { sector: "Frontend Dev", match: 10, total: 12, percentage: 83 },
+    { sector: "AI/ML", match: 3, total: 10, percentage: 30 },
+    { sector: "Cloud Computing", match: 2, total: 10, percentage: 20 },
+  ]
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Technology Stack Alignment</CardTitle>
+        <CardDescription>Match between your skills and target tech sectors</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {stackData.map((stack) => (
+          <div key={stack.sector} className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-semibold">{stack.sector}</p>
+                <p className="text-sm text-muted-foreground">
+                  {stack.match}/{stack.total} relevant skills ({stack.percentage}%)
+                </p>
+              </div>
+              <Badge
+                variant={stack.percentage >= 70 ? "default" : stack.percentage >= 50 ? "secondary" : "outline"}
+              >
+                {stack.percentage}%
+              </Badge>
+            </div>
+            <div className="relative h-3 w-full rounded-full overflow-hidden bg-muted">
+              <div
+                className={cn(
+                  "h-full transition-all",
+                  stack.percentage >= 70 ? "bg-green-500" : stack.percentage >= 50 ? "bg-yellow-500" : "bg-orange-500"
+                )}
+                style={{ width: `${stack.percentage}%` }}
+              />
+            </div>
+          </div>
+        ))}
+
+        <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
+          <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">Top Skills to Learn:</h4>
+          <ul className="space-y-1 text-sm text-blue-700 dark:text-blue-300">
+            <li>• AWS/Azure basics (for Cloud Computing)</li>
+            <li>• TensorFlow or PyTorch (for AI/ML)</li>
+            <li>• Docker & Kubernetes (for DevOps)</li>
+          </ul>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+interface Project {
+  name: string
+  category: "Web" | "Mobile" | "XR" | "Data" | "Other"
+  completedAt?: string
+  teamSize?: number
+  technologies?: string[]
+  description?: string
+}
+
+// Helper function to categorize project based on technologies
+function categorizeProject(technologies: string[]): Project["category"] {
+  const techString = technologies.join(" ").toLowerCase()
+  if (techString.includes("react native") || techString.includes("ios") || techString.includes("android") || techString.includes("swift") || techString.includes("kotlin")) return "Mobile"
+  if (techString.includes("vr") || techString.includes("ar") || techString.includes("unity") || techString.includes("unreal")) return "XR"
+  if (techString.includes("data") || techString.includes("ml") || techString.includes("ai") || techString.includes("pandas") || techString.includes("numpy")) return "Data"
+  if (techString.includes("react") || techString.includes("next") || techString.includes("vue") || techString.includes("angular") || techString.includes("web")) return "Web"
+  return "Other"
+}
+
+// Parse projects from resume data
+function parseProjectsFromResume(resumeData: any): Project[] {
+  if (!resumeData?.projects || resumeData.projects.length === 0) return []
+
+  return resumeData.projects.map((project: any) => ({
+    name: project.name || "Unnamed Project",
+    category: categorizeProject(project.technologies || []),
+    completedAt: undefined, // Resume schema doesn't have project completion date
+    teamSize: undefined, // Resume schema doesn't have team size
+    technologies: project.technologies || [],
+    description: project.description || "",
+  }))
+>>>>>>> 70d30f20b853c56310df4ce167c543e5508d4835
 }
 
 // Map role types and tech sectors to project categories for relevance scoring
@@ -664,11 +754,11 @@ const sectorToCategories: Record<string, string[]> = {
   "EdTech": ["Web", "Mobile"],
 }
 
-function ProjectPortfolioSummary({ 
-  projects, 
-  roleTypes = [], 
-  techSectors = [] 
-}: { 
+function ProjectPortfolioSummary({
+  projects,
+  roleTypes = [],
+  techSectors = []
+}: {
   projects: Project[]
   roleTypes?: string[]
   techSectors?: string[]
@@ -705,22 +795,22 @@ function ProjectPortfolioSummary({
 
   const relevantCategories = getRelevantCategories()
   const categoryDiversity = Object.keys(categoryCounts).length
-  
+
   // Count how many projects are in relevant categories
-  const relevantProjectCount = projects.filter(p => 
+  const relevantProjectCount = projects.filter(p =>
     relevantCategories.has(categorizeProject(p.technologies))
   ).length
 
   // Calculate a score based on: count, diversity, and relevance
   const calculateScore = () => {
     let score = 0
-    
+
     // Base score from project count (max 40 points)
     score += Math.min(projectCount * 10, 40)
-    
+
     // Diversity bonus (max 20 points)
     score += Math.min(categoryDiversity * 10, 20)
-    
+
     // Relevance bonus - projects matching target roles/sectors (max 40 points)
     if (relevantCategories.size > 0 && projectCount > 0) {
       const relevancePercent = relevantProjectCount / projectCount
@@ -728,37 +818,37 @@ function ProjectPortfolioSummary({
     } else {
       score += 20 // Default if no preferences set
     }
-    
+
     return Math.min(score, 100)
   }
 
   const score = calculateScore()
 
   const getProjectStatus = () => {
-    if (projectCount === 0) return { 
-      status: "Get Started", 
+    if (projectCount === 0) return {
+      status: "Get Started",
       message: "Add projects to your resume to showcase your hands-on experience!",
       color: "text-blue-600",
       bgColor: "bg-blue-50 dark:bg-blue-950/20",
       borderColor: "border-blue-200 dark:border-blue-900"
     }
-    if (score < 40) return { 
-      status: "Build More", 
-      message: "Focus on building more projects, especially in areas related to your target roles.", 
+    if (score < 40) return {
+      status: "Build More",
+      message: "Focus on building more projects, especially in areas related to your target roles.",
       color: "text-amber-600",
       bgColor: "bg-amber-50 dark:bg-amber-950/20",
       borderColor: "border-amber-200 dark:border-amber-900"
     }
-    if (score < 70) return { 
-      status: "Good Progress", 
-      message: `Good foundation! ${relevantCategories.size > 0 && relevantProjectCount < projectCount ? "Consider adding more projects aligned with your target roles." : "Keep building diverse projects."}`, 
+    if (score < 70) return {
+      status: "Good Progress",
+      message: `Good foundation! ${relevantCategories.size > 0 && relevantProjectCount < projectCount ? "Consider adding more projects aligned with your target roles." : "Keep building diverse projects."}`,
       color: "text-green-600",
       bgColor: "bg-green-50 dark:bg-green-950/20",
       borderColor: "border-green-200 dark:border-green-900"
     }
-    return { 
-      status: "Excellent!", 
-      message: "Strong portfolio with good diversity and alignment to your career goals!", 
+    return {
+      status: "Excellent!",
+      message: "Strong portfolio with good diversity and alignment to your career goals!",
       color: "text-emerald-600",
       bgColor: "bg-emerald-50 dark:bg-emerald-950/20",
       borderColor: "border-emerald-200 dark:border-emerald-900"
@@ -813,55 +903,74 @@ function ProjectPortfolioSummary({
         </div>
 
         {/* Project List */}
-        <div className="space-y-3 max-h-80 overflow-y-auto">
-          {projects.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <FolderKanban className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p>No projects found in your resume</p>
-              <p className="text-sm mt-1">Add projects to showcase your hands-on experience!</p>
+<<<<<<< HEAD
+  <div className="space-y-3 max-h-80 overflow-y-auto">
+    {projects.length === 0 ? (
+      <div className="text-center py-8 text-muted-foreground">
+        <FolderKanban className="h-12 w-12 mx-auto mb-3 opacity-50" />
+        <p>No projects found in your resume</p>
+        <p className="text-sm mt-1">Add projects to showcase your hands-on experience!</p>
+=======
+        <div className="space-y-2 max-h-64 overflow-y-auto">
+          {projects.map((p, i) => (
+            <div
+              key={i}
+              className="p-2 border rounded-lg flex flex-col bg-muted/5 dark:bg-muted/20"
+            >
+              <p className="font-semibold">{p.name}</p>
+              <p className="text-xs text-muted-foreground">
+                Category: {p.category}
+                {p.technologies && p.technologies.length > 0 && (
+                  <> | Tech: {p.technologies.slice(0, 3).join(", ")}{p.technologies.length > 3 ? "..." : ""}</>
+                )}
+              </p>
+              {p.description && (
+                <p className="text-xs text-muted-foreground mt-1">{p.description}</p>
+              )}
+>>>>>>> 70d30f20b853c56310df4ce167c543e5508d4835
             </div>
           ) : (
             projects.map((p, i) => (
-              <div
-                key={i}
-                className="p-3 border rounded-lg bg-muted/5 dark:bg-muted/20 space-y-2"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-semibold">{p.name}</p>
-                    {p.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{p.description}</p>
-                    )}
-                  </div>
-                </div>
-                {p.technologies.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {p.technologies.slice(0, 6).map((tech, idx) => (
-                      <Badge key={idx} variant="secondary" className="text-xs">
-                        {tech}
-                      </Badge>
-                    ))}
-                    {p.technologies.length > 6 && (
-                      <Badge variant="secondary" className="text-xs">+{p.technologies.length - 6}</Badge>
-                    )}
-                  </div>
-                )}
-                {(p.github || p.link) && (
-                  <div className="flex gap-3 text-xs">
-                    {p.github && (
-                      <a href={p.github} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-muted-foreground hover:text-foreground">
-                        <Github className="h-3 w-3" /> GitHub
-                      </a>
-                    )}
-                    {p.link && (
-                      <a href={p.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-muted-foreground hover:text-foreground">
-                        <Globe className="h-3 w-3" /> Live Demo
-                      </a>
-                    )}
-                  </div>
+          <div
+            key={i}
+            className="p-3 border rounded-lg bg-muted/5 dark:bg-muted/20 space-y-2"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="font-semibold">{p.name}</p>
+                {p.description && (
+                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{p.description}</p>
                 )}
               </div>
-            ))
+            </div>
+            {p.technologies.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {p.technologies.slice(0, 6).map((tech, idx) => (
+                  <Badge key={idx} variant="secondary" className="text-xs">
+                    {tech}
+                  </Badge>
+                ))}
+                {p.technologies.length > 6 && (
+                  <Badge variant="secondary" className="text-xs">+{p.technologies.length - 6}</Badge>
+                )}
+              </div>
+            )}
+            {(p.github || p.link) && (
+              <div className="flex gap-3 text-xs">
+                {p.github && (
+                  <a href={p.github} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-muted-foreground hover:text-foreground">
+                    <Github className="h-3 w-3" /> GitHub
+                  </a>
+                )}
+                {p.link && (
+                  <a href={p.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-muted-foreground hover:text-foreground">
+                    <Globe className="h-3 w-3" /> Live Demo
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+          ))
           )}
         </div>
       </CardContent>
@@ -881,11 +990,11 @@ interface ResumeScoreProps {
   techSectors?: string[]
 }
 
-function OverallResumeScore({ 
-  gpa, 
-  skills, 
-  resume, 
-  projects, 
+function OverallResumeScore({
+  gpa,
+  skills,
+  resume,
+  projects,
   internships,
   courseworkCategories = 0,
   roleTypes = [],
@@ -913,15 +1022,15 @@ function OverallResumeScore({
       devops: skills.devops.length,
       certs: skills.certifications.length,
     }
-    
+
     // Coverage: how many categories have at least 1 skill (max 5 categories)
     const coveredCategories = Object.values(counts).filter(c => c > 0).length
     const coverageScore = (coveredCategories / 5) * 50
-    
+
     // Count: total skills (diminishing returns)
     const totalSkills = Object.values(counts).reduce((a, b) => a + b, 0)
     const countScore = Math.min(totalSkills * 3, 50)
-    
+
     return Math.round(coverageScore + countScore)
   }
   const skillsScore = calculateSkillsScore()
@@ -954,7 +1063,7 @@ function OverallResumeScore({
   // 5. Project Portfolio Score (count + diversity + relevance)
   const calculateProjectScore = () => {
     if (projects.length === 0) return 0
-    
+
     const categorizeProject = (tech: string[]): string => {
       const techLower = tech.map(t => t.toLowerCase())
       if (techLower.some(t => t.includes('react native') || t.includes('flutter') || t.includes('swift') || t.includes('kotlin'))) return 'Mobile'
@@ -965,7 +1074,7 @@ function OverallResumeScore({
 
     const categories = new Set(projects.map(p => categorizeProject(p.technologies)))
     const diversity = categories.size
-    
+
     // Base score from count (max 40)
     let score = Math.min(projects.length * 10, 40)
     // Diversity bonus (max 20)
@@ -974,14 +1083,14 @@ function OverallResumeScore({
     const relevantCategories = new Set<string>()
     roleTypes.forEach(role => roleToCategories[role]?.forEach(cat => relevantCategories.add(cat)))
     techSectors.forEach(sector => sectorToCategories[sector]?.forEach(cat => relevantCategories.add(cat)))
-    
+
     if (relevantCategories.size > 0) {
       const relevantCount = projects.filter(p => relevantCategories.has(categorizeProject(p.technologies))).length
       score += Math.round((relevantCount / projects.length) * 40)
     } else {
       score += 20
     }
-    
+
     return Math.min(score, 100)
   }
   const projectScore = calculateProjectScore()
@@ -989,10 +1098,10 @@ function OverallResumeScore({
   // 6. Internship Score (count + relevance)
   const calculateInternshipScore = () => {
     if (internships.length === 0) return 0
-    
+
     // Base score from count
     let score = Math.min(internships.length * 35, 70)
-    
+
     // Relevance bonus
     if (roleTypes.length > 0) {
       const calculateRelevance = (exp: Experience): boolean => {
@@ -1007,7 +1116,7 @@ function OverallResumeScore({
     } else {
       score += 15
     }
-    
+
     return Math.min(score, 100)
   }
   const internshipScore = calculateInternshipScore()
@@ -1015,11 +1124,11 @@ function OverallResumeScore({
   // Calculate weighted total
   const totalScore = Math.round(
     (courseworkScore * WEIGHTS.coursework +
-     skillsScore * WEIGHTS.skills +
-     completenessScore * WEIGHTS.resumeCompleteness +
-     gpaScore * WEIGHTS.gpa +
-     projectScore * WEIGHTS.projects +
-     internshipScore * WEIGHTS.internships) / 100
+      skillsScore * WEIGHTS.skills +
+      completenessScore * WEIGHTS.resumeCompleteness +
+      gpaScore * WEIGHTS.gpa +
+      projectScore * WEIGHTS.projects +
+      internshipScore * WEIGHTS.internships) / 100
   )
 
   const getScoreStatus = (score: number) => {
@@ -1248,17 +1357,17 @@ const roleKeywords: Record<string, string[]> = {
   "UI/UX Designer": ["design", "ui", "ux", "figma", "user experience", "prototype"],
 }
 
-function InternshipSummary({ 
-  experiences, 
-  roleTypes = [], 
-  techSectors = [] 
-}: { 
+function InternshipSummary({
+  experiences,
+  roleTypes = [],
+  techSectors = []
+}: {
   experiences: Experience[]
   roleTypes?: string[]
   techSectors?: string[]
 }) {
   // Filter to only internships
-  const internships = experiences.filter(exp => 
+  const internships = experiences.filter(exp =>
     exp.position.toLowerCase().includes('intern')
   )
   const internshipCount = internships.length
@@ -1266,7 +1375,7 @@ function InternshipSummary({
   // Calculate relevance for each experience
   const calculateRelevance = (exp: Experience): boolean => {
     if (roleTypes.length === 0) return true
-    
+
     const expText = [
       exp.position,
       exp.company,
@@ -1274,7 +1383,7 @@ function InternshipSummary({
       ...exp.achievements,
       ...exp.technologies
     ].join(' ').toLowerCase()
-    
+
     return roleTypes.some(role => {
       const keywords = roleKeywords[role] || []
       return keywords.some(keyword => expText.includes(keyword))
@@ -1282,8 +1391,8 @@ function InternshipSummary({
   }
 
   const relevantInternships = internships.filter(calculateRelevance)
-  const relevancePercent = internshipCount > 0 
-    ? Math.round((relevantInternships.length / internshipCount) * 100) 
+  const relevancePercent = internshipCount > 0
+    ? Math.round((relevantInternships.length / internshipCount) * 100)
     : 0
 
   const getInternshipStatus = () => {
@@ -1380,58 +1489,60 @@ function InternshipSummary({
 
         {/* Internship list */}
         <div className="space-y-3 max-h-80 overflow-y-auto">
-          {internships.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Briefcase className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p>No internships found in your resume</p>
-              <p className="text-sm mt-1">Your first internship is just around the corner!</p>
-            </div>
-          ) : (
-            internships.map((exp, idx) => {
-              const isRelevant = calculateRelevance(exp)
-              return (
-                <div
-                  key={idx}
-                  className={cn(
-                    "p-3 border rounded-lg bg-muted/5 dark:bg-muted/20 space-y-2",
-                    isRelevant && roleTypes.length > 0 && "border-primary/30"
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-semibold">{exp.position}</p>
-                      <p className="text-sm text-muted-foreground">{exp.company} • {exp.location}</p>
-                    </div>
-                    {isRelevant && roleTypes.length > 0 && (
-                      <Badge variant="outline" className="shrink-0 border-primary/50 text-primary">
-                        <Target className="h-3 w-3 mr-1" /> Relevant
-                      </Badge>
+          {
+            internships.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Briefcase className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>No internships found in your resume</p>
+                <p className="text-sm mt-1">Your first internship is just around the corner!</p>
+              </div >
+            ) : (
+              internships.map((exp, idx) => {
+                const isRelevant = calculateRelevance(exp)
+                return (
+                  <div
+                    key={idx}
+                    className={cn(
+                      "p-3 border rounded-lg bg-muted/5 dark:bg-muted/20 space-y-2",
+                      isRelevant && roleTypes.length > 0 && "border-primary/30"
                     )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(exp.start_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} 
-                    {" — "}
-                    {exp.end_date ? new Date(exp.end_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : "Present"}
-                  </p>
-                  {exp.technologies.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {exp.technologies.slice(0, 5).map((tech, tidx) => (
-                        <Badge key={tidx} variant="secondary" className="text-xs">
-                          {tech}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-semibold">{exp.position}</p>
+                        <p className="text-sm text-muted-foreground">{exp.company} • {exp.location}</p>
+                      </div>
+                      {isRelevant && roleTypes.length > 0 && (
+                        <Badge variant="outline" className="shrink-0 border-primary/50 text-primary">
+                          <Target className="h-3 w-3 mr-1" /> Relevant
                         </Badge>
-                      ))}
-                      {exp.technologies.length > 5 && (
-                        <Badge variant="secondary" className="text-xs">+{exp.technologies.length - 5}</Badge>
                       )}
                     </div>
-                  )}
-                </div>
-              )
-            })
-          )}
-        </div>
-      </CardContent>
-    </Card>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(exp.start_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                      {" — "}
+                      {exp.end_date ? new Date(exp.end_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : "Present"}
+                    </p>
+                    {exp.technologies.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {exp.technologies.slice(0, 5).map((tech, tidx) => (
+                          <Badge key={tidx} variant="secondary" className="text-xs">
+                            {tech}
+                          </Badge>
+                        ))}
+                        {exp.technologies.length > 5 && (
+                          <Badge variant="secondary" className="text-xs">+{exp.technologies.length - 5}</Badge>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })
+            )
+          }
+        </div >
+      </CardContent >
+    </Card >
   )
 }
 
@@ -1547,10 +1658,10 @@ const roleRequiredSkills: Record<string, { languages: string[], frameworks: stri
   },
 }
 
-function RoleSkillsMatch({ 
+function RoleSkillsMatch({
   skills,
   roleTypes = []
-}: { 
+}: {
   skills: typeof mockStudentData.skills
   roleTypes?: string[]
 }) {
@@ -1576,7 +1687,7 @@ function RoleSkillsMatch({
       ...required.devops
     ]
 
-    const matchedSkills = allRequired.filter(req => 
+    const matchedSkills = allRequired.filter(req =>
       userSkills.some(skill => skill.includes(req) || req.includes(skill))
     )
 
@@ -1720,7 +1831,7 @@ export default function DashboardPage() {
       resumeData.education?.[0]?.end_date,
       resumeData.education?.[0]?.start_date
     ),
-    internshipCount: resumeData.experience?.filter(exp => 
+    internshipCount: resumeData.experience?.filter(exp =>
       exp.position.toLowerCase().includes('intern')
     ).length || 0,
     projectCount: resumeData.projects?.length || 0,
@@ -1741,6 +1852,9 @@ export default function DashboardPage() {
       hasExtracurriculars: (resumeData.extracurriculars?.length || 0) > 0,
     },
   } : mockStudentData
+
+  // Parse projects and experience from resume data
+  // const projects = resumeData ? parseProjectsFromResume(resumeData) : []
 
   // Show loading state
   if (isLoading) {
@@ -1851,7 +1965,7 @@ export default function DashboardPage() {
               roleTypes={questionnaireData?.roleTypes}
               techSectors={questionnaireData?.techSectors}
             />
-            
+
             {questionnaireData && <JobPreferencesSummary preferences={questionnaireData} />}
             <Accordion type="multiple" className="space-y-4" defaultValue={["coursework", "skills-overview", "tech-overview", "resume-overview"]}>
               <AccordionItem value="coursework" className="border rounded-lg px-4">
@@ -1970,8 +2084,8 @@ export default function DashboardPage() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <ProjectPortfolioSummary 
-                    projects={resumeData?.projects || []} 
+                  <ProjectPortfolioSummary
+                    projects={resumeData?.projects || []}
                     roleTypes={questionnaireData?.roleTypes}
                     techSectors={questionnaireData?.techSectors}
                   />
@@ -1993,17 +2107,17 @@ export default function DashboardPage() {
           </TabsContent>
 
           <TabsContent value="experience" className="space-y-6">
-            <Accordion type="multiple" className="space-y-4" defaultValue={["internships", "roles"]}>
-              <AccordionItem value="internships" className="border rounded-lg px-4">
+            <Accordion type="multiple" className="space-y-4" defaultValue={["experience", "roles"]}>
+              <AccordionItem value="experience" className="border rounded-lg px-4">
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-2">
                     <Briefcase className="h-5 w-5 text-primary" />
-                    <span className="font-semibold">Internship Experience</span>
+                    <span className="font-semibold">Work Experience</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <InternshipSummary 
-                    experiences={resumeData?.experience || []} 
+                  <InternshipSummary
+                    experiences={resumeData?.experience || []}
                     roleTypes={questionnaireData?.roleTypes}
                     techSectors={questionnaireData?.techSectors}
                   />
