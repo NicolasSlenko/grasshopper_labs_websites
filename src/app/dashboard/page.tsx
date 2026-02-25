@@ -1138,7 +1138,7 @@ const roleKeywords: Record<string, string[]> = {
   "UI/UX Designer": ["design", "ui", "ux", "figma", "user experience", "prototype"],
 }
 
-function InternshipSummary({
+function ExperienceSummary({
   experiences,
   roleTypes = [],
   techSectors = []
@@ -1147,11 +1147,24 @@ function InternshipSummary({
   roleTypes?: string[]
   techSectors?: string[]
 }) {
-  // Filter to only internships
-  const internships = experiences.filter(exp =>
-    exp.position.toLowerCase().includes('intern')
-  )
-  const internshipCount = internships.length
+  const totalCount = experiences.length
+
+  // Categorize each experience by type
+  const categorizeExperience = (exp: Experience): string => {
+    const pos = exp.position.toLowerCase()
+    if (pos.includes('intern')) return 'Internship'
+    if (pos.includes('research') || pos.includes('researcher') || pos.includes('lab')) return 'Research'
+    if (pos.includes('part-time') || pos.includes('part time')) return 'Part-Time'
+    if (pos.includes('freelance') || pos.includes('contract')) return 'Freelance'
+    if (pos.includes('volunteer') || pos.includes('teaching') || pos.includes('tutor')) return 'Volunteer / Teaching'
+    return 'Full-Time / Other'
+  }
+
+  const typeCounts = experiences.reduce<Record<string, number>>((acc, exp) => {
+    const type = categorizeExperience(exp)
+    acc[type] = (acc[type] || 0) + 1
+    return acc
+  }, {})
 
   // Calculate relevance for each experience
   const calculateRelevance = (exp: Experience): boolean => {
@@ -1171,25 +1184,25 @@ function InternshipSummary({
     })
   }
 
-  const relevantInternships = internships.filter(calculateRelevance)
-  const relevancePercent = internshipCount > 0
-    ? Math.round((relevantInternships.length / internshipCount) * 100)
+  const relevantExperiences = experiences.filter(calculateRelevance)
+  const relevancePercent = totalCount > 0
+    ? Math.round((relevantExperiences.length / totalCount) * 100)
     : 0
 
-  const getInternshipStatus = () => {
-    if (internshipCount === 0) return {
+  const getExperienceStatus = () => {
+    if (totalCount === 0) return {
       status: "Get Started",
-      message: "No internships yet — that's okay! Focus on projects and skills to land your first opportunity.",
+      message: "No experience listed yet — that's okay! Focus on projects and skills to land your first opportunity.",
       color: "text-blue-600",
       bgColor: "bg-blue-50 dark:bg-blue-950/20",
       borderColor: "border-blue-200 dark:border-blue-900",
       icon: Briefcase
     }
-    if (internshipCount === 1) {
-      if (roleTypes.length > 0 && relevantInternships.length === 0) {
+    if (totalCount === 1) {
+      if (roleTypes.length > 0 && relevantExperiences.length === 0) {
         return {
           status: "Good Start",
-          message: "You have experience! Consider seeking internships more aligned with your target roles.",
+          message: "You have experience! Consider seeking roles more aligned with your target career path.",
           color: "text-amber-600",
           bgColor: "bg-amber-50 dark:bg-amber-950/20",
           borderColor: "border-amber-200 dark:border-amber-900",
@@ -1198,7 +1211,7 @@ function InternshipSummary({
       }
       return {
         status: "Great Start",
-        message: "Having internship experience gives you a significant advantage. Keep building!",
+        message: "Having professional experience gives you a significant advantage. Keep building!",
         color: "text-green-600",
         bgColor: "bg-green-50 dark:bg-green-950/20",
         borderColor: "border-green-200 dark:border-green-900",
@@ -1208,7 +1221,7 @@ function InternshipSummary({
     if (roleTypes.length > 0 && relevancePercent < 50) {
       return {
         status: "Strong Experience",
-        message: `Great experience! Consider targeting internships more aligned with your goal of ${roleTypes[0]}.`,
+        message: `Solid background! Consider targeting roles more aligned with your goal of ${roleTypes[0]}.`,
         color: "text-green-600",
         bgColor: "bg-green-50 dark:bg-green-950/20",
         borderColor: "border-green-200 dark:border-green-900",
@@ -1225,31 +1238,56 @@ function InternshipSummary({
     }
   }
 
-  const status = getInternshipStatus()
+  const status = getExperienceStatus()
   const Icon = status.icon
+
+  // Badge color per experience type
+  const typeBadgeColor: Record<string, string> = {
+    'Internship': 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300',
+    'Research': 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300',
+    'Full-Time / Other': 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300',
+    'Part-Time': 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
+    'Freelance': 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300',
+    'Volunteer / Teaching': 'bg-pink-100 text-pink-700 dark:bg-pink-950 dark:text-pink-300',
+  }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Internship Experience</CardTitle>
-        <CardDescription>Your internship history and career alignment</CardDescription>
+        <CardTitle>Professional Experience</CardTitle>
+        <CardDescription>Your work history, research, and career alignment</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-4 text-center">
+        <div className="grid grid-cols-3 gap-4 text-center">
           <div>
-            <p className="text-4xl font-bold">{internshipCount}</p>
+            <p className="text-4xl font-bold">{totalCount}</p>
             <p className="text-sm text-muted-foreground">
-              {internshipCount === 1 ? "Internship" : "Internships"}
+              {totalCount === 1 ? "Position" : "Positions"}
             </p>
           </div>
-          {roleTypes.length > 0 && internshipCount > 0 && (
+          <div>
+            <p className="text-4xl font-bold">{Object.keys(typeCounts).length}</p>
+            <p className="text-sm text-muted-foreground">Types</p>
+          </div>
+          {roleTypes.length > 0 && totalCount > 0 && (
             <div>
-              <p className="text-4xl font-bold text-primary">{relevantInternships.length}</p>
+              <p className="text-4xl font-bold text-primary">{relevantExperiences.length}</p>
               <p className="text-sm text-muted-foreground">Role-Aligned</p>
             </div>
           )}
         </div>
+
+        {/* Type breakdown badges */}
+        {totalCount > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(typeCounts).map(([type, count]) => (
+              <Badge key={type} className={cn("text-xs", typeBadgeColor[type] || 'bg-muted text-muted-foreground')}>
+                {type}: {count}
+              </Badge>
+            ))}
+          </div>
+        )}
 
         {/* Status box */}
         <div className={cn("p-4 rounded-lg border", status.bgColor, status.borderColor)}>
@@ -1258,27 +1296,28 @@ function InternshipSummary({
             <div>
               <h4 className={cn("font-semibold", status.color)}>{status.status}</h4>
               <p className="text-sm text-muted-foreground mt-1">{status.message}</p>
-              {roleTypes.length > 0 && internshipCount > 0 && (
+              {roleTypes.length > 0 && totalCount > 0 && (
                 <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
                   <Target className="h-3 w-3" />
-                  {relevantInternships.length} of {internshipCount} aligned with target roles
+                  {relevantExperiences.length} of {totalCount} aligned with target roles
                 </p>
               )}
             </div>
           </div>
         </div>
 
-        {/* Internship list */}
+        {/* Experience list */}
         <div className="space-y-3 max-h-80 overflow-y-auto">
-          {internships.length === 0 ? (
+          {experiences.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Briefcase className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p>No internships found in your resume</p>
-              <p className="text-sm mt-1">Your first internship is just around the corner!</p>
+              <p>No experience found in your resume</p>
+              <p className="text-sm mt-1">Add internships, jobs, research, or other roles to showcase your background!</p>
             </div>
           ) : (
-            internships.map((exp, idx) => {
+            experiences.map((exp, idx) => {
               const isRelevant = calculateRelevance(exp)
+              const expType = categorizeExperience(exp)
               return (
                 <div
                   key={idx}
@@ -1292,11 +1331,16 @@ function InternshipSummary({
                       <p className="font-semibold">{exp.position}</p>
                       <p className="text-sm text-muted-foreground">{exp.company} • {exp.location}</p>
                     </div>
-                    {isRelevant && roleTypes.length > 0 && (
-                      <Badge variant="outline" className="shrink-0 border-primary/50 text-primary">
-                        <Target className="h-3 w-3 mr-1" /> Relevant
+                    <div className="flex gap-1.5 shrink-0">
+                      <Badge className={cn("text-xs", typeBadgeColor[expType] || 'bg-muted text-muted-foreground')}>
+                        {expType}
                       </Badge>
-                    )}
+                      {isRelevant && roleTypes.length > 0 && (
+                        <Badge variant="outline" className="border-primary/50 text-primary">
+                          <Target className="h-3 w-3 mr-1" /> Relevant
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {new Date(exp.start_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
@@ -1898,7 +1942,7 @@ export default function DashboardPage() {
               skills={studentData.skills}
               resume={studentData.resume}
               projects={resumeData?.projects || []}
-              internships={(resumeData?.experience || []).filter(exp => exp.position.toLowerCase().includes('intern'))}
+              internships={resumeData?.experience || []}
               courseworkCategories={3} // TODO: Calculate from actual coursework data
               roleTypes={questionnaireData?.roleTypes}
               techSectors={questionnaireData?.techSectors}
@@ -2046,16 +2090,16 @@ export default function DashboardPage() {
           </TabsContent>
 
           <TabsContent value="experience" className="space-y-6">
-            <Accordion type="multiple" className="space-y-4" defaultValue={["internships", "roles"]}>
-              <AccordionItem value="internships" className="border rounded-lg px-4">
+            <Accordion type="multiple" className="space-y-4" defaultValue={["experience", "roles"]}>
+              <AccordionItem value="experience" className="border rounded-lg px-4">
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-2">
                     <Briefcase className="h-5 w-5 text-primary" />
-                    <span className="font-semibold">Internship Experience</span>
+                    <span className="font-semibold">Professional Experience</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <InternshipSummary
+                  <ExperienceSummary
                     experiences={resumeData?.experience || []}
                     roleTypes={questionnaireData?.roleTypes}
                     techSectors={questionnaireData?.techSectors}
