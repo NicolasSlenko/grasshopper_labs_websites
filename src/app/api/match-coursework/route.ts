@@ -89,17 +89,38 @@ export async function GET(request: NextRequest) {
 
     console.log(`Found ${resumeCourses.length} courses in resume:`, resumeCourses)
 
-    // Fetch UF courses from all CS prefixes
-    console.log("Fetching UF courses from API...")
-    const allUFCourses: Array<{ name: string; code: string }> = []
-    
-    for (const prefix of UF_CS_PREFIXES) {
-      const courses = await fetchUFCoursesByPrefix(prefix, term)
-      allUFCourses.push(...courses)
-      console.log(`Fetched ${courses.length} courses for prefix ${prefix}`)
-    }
+    // Check S3 cache for UF course catalog (shared across all users, keyed by term)
+    const catalogCacheKey = `cache/uf-courses-${term}.json`
+    let allUFCourses: Array<{ name: string; code: string }> = []
 
-    console.log(`Total UF courses fetched: ${allUFCourses.length}`)
+    const cachedCatalog = await getJsonFromS3<Array<{ name: string; code: string }>>(catalogCacheKey)
+
+    if (cachedCatalog && cachedCatalog.length > 0) {
+      allUFCourses = cachedCatalog
+      console.log(`Using cached UF courses for term ${term} (${allUFCourses.length} courses)`)
+    } else {
+      // Fetch UF courses from all CS prefixes (first request per semester)
+      console.log("Fetching UF courses from API (no cache found)...")
+      
+      for (const prefix of UF_CS_PREFIXES) {
+        const courses = await fetchUFCoursesByPrefix(prefix, term)
+        allUFCourses.push(...courses)
+        console.log(`Fetched ${courses.length} courses for prefix ${prefix}`)
+      }
+
+      console.log(`Total UF courses fetched: ${allUFCourses.length}`)
+
+      // Save to S3 cache for future requests
+      if (allUFCourses.length > 0) {
+        try {
+          await putJsonToS3(catalogCacheKey, allUFCourses)
+          console.log(`Cached UF courses for term ${term}`)
+        } catch (cacheError) {
+          console.error("Error caching UF courses to S3:", cacheError)
+          // Continue anyway — caching failure is not critical
+        }
+      }
+    }
     
     // Filter for undergraduate courses (3000-4000 level only, exclude specific courses)
     const excludedCourses = [

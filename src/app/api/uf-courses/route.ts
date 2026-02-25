@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { getJsonFromS3, putJsonToS3 } from "@/lib/aws/s3"
 
 interface UFMeetTime {
   meetDays: string[]
@@ -88,9 +89,23 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Check S3 cache for this specific query
+    const cacheKey = `cache/uf-courses-${term}-${courseCodes.sort().join("-")}.json`
+    const cachedCourses = await getJsonFromS3<UFCourse[]>(cacheKey)
+
+    if (cachedCourses && cachedCourses.length > 0) {
+      console.log(`Using cached UF courses for codes [${courseCodes}] term ${term}`)
+      return NextResponse.json({
+        success: true,
+        courses: cachedCourses,
+        count: cachedCourses.length,
+        cached: true,
+      })
+    }
+
     const allCourses: UFCourse[] = []
 
-    // Fetch each course
+    // Fetch each course from UF API
     for (const code of courseCodes) {
       const trimmedCode = code.trim()
       if (trimmedCode) {
@@ -99,6 +114,16 @@ export async function GET(request: NextRequest) {
           const parsed = parseUFCourses(data)
           allCourses.push(...parsed)
         }
+      }
+    }
+
+    // Cache the result
+    if (allCourses.length > 0) {
+      try {
+        await putJsonToS3(cacheKey, allCourses)
+        console.log(`Cached UF courses for codes [${courseCodes}] term ${term}`)
+      } catch (cacheError) {
+        console.error("Error caching UF courses:", cacheError)
       }
     }
 
@@ -132,6 +157,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check S3 cache for this set of prefixes
+    const cacheKey = `cache/uf-courses-${term}-prefixes-${prefixes.sort().join("-")}.json`
+    const cachedCourses = await getJsonFromS3<UFCourse[]>(cacheKey)
+
+    if (cachedCourses && cachedCourses.length > 0) {
+      console.log(`Using cached UF courses for prefixes [${prefixes}] term ${term}`)
+      return NextResponse.json({
+        success: true,
+        courses: cachedCourses,
+        count: cachedCourses.length,
+        cached: true,
+      })
+    }
+
     const allCourses: UFCourse[] = []
 
     // Fetch courses for each prefix (e.g., "COP", "CDA", "CAP")
@@ -140,6 +179,16 @@ export async function POST(request: NextRequest) {
       if (data) {
         const parsed = parseUFCourses(data)
         allCourses.push(...parsed)
+      }
+    }
+
+    // Cache the result
+    if (allCourses.length > 0) {
+      try {
+        await putJsonToS3(cacheKey, allCourses)
+        console.log(`Cached UF courses for prefixes [${prefixes}] term ${term}`)
+      } catch (cacheError) {
+        console.error("Error caching UF courses:", cacheError)
       }
     }
 
