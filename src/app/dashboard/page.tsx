@@ -458,19 +458,37 @@ function TechStackAlignment() {
   )
 }
 
-const mockProjects: Project[] = [
-  { name: "Portfolio Website", category: "Web", completedAt: "2025-09-10", teamSize: 1 },
-  { name: "VR Game", category: "XR", completedAt: "2025-06-22", teamSize: 3 },
-  { name: "Mobile App", category: "Mobile", completedAt: "2025-08-01", teamSize: 2 },
-  { name: "Data Analysis Tool", category: "Data", completedAt: "2025-07-15", teamSize: 1 },
-  { name: "E-commerce Platform", category: "Web", completedAt: "2025-05-10", teamSize: 4 },
-]
-
 interface Project {
   name: string
   category: "Web" | "Mobile" | "XR" | "Data" | "Other"
-  completedAt: string // ISO date string
+  completedAt?: string
   teamSize?: number
+  technologies?: string[]
+  description?: string
+}
+
+// Helper function to categorize project based on technologies
+function categorizeProject(technologies: string[]): Project["category"] {
+  const techString = technologies.join(" ").toLowerCase()
+  if (techString.includes("react native") || techString.includes("ios") || techString.includes("android") || techString.includes("swift") || techString.includes("kotlin")) return "Mobile"
+  if (techString.includes("vr") || techString.includes("ar") || techString.includes("unity") || techString.includes("unreal")) return "XR"
+  if (techString.includes("data") || techString.includes("ml") || techString.includes("ai") || techString.includes("pandas") || techString.includes("numpy")) return "Data"
+  if (techString.includes("react") || techString.includes("next") || techString.includes("vue") || techString.includes("angular") || techString.includes("web")) return "Web"
+  return "Other"
+}
+
+// Parse projects from resume data
+function parseProjectsFromResume(resumeData: any): Project[] {
+  if (!resumeData?.projects || resumeData.projects.length === 0) return []
+  
+  return resumeData.projects.map((project: any) => ({
+    name: project.name || "Unnamed Project",
+    category: categorizeProject(project.technologies || []),
+    completedAt: undefined, // Resume schema doesn't have project completion date
+    teamSize: undefined, // Resume schema doesn't have team size
+    technologies: project.technologies || [],
+    description: project.description || "",
+  }))
 }
 
 function ProjectPortfolioSummary({ projects }: { projects: Project[] }) {
@@ -545,8 +563,14 @@ function ProjectPortfolioSummary({ projects }: { projects: Project[] }) {
             >
               <p className="font-semibold">{p.name}</p>
               <p className="text-xs text-muted-foreground">
-                Category: {p.category} | Completed: {new Date(p.completedAt).toLocaleDateString()} | Team Size: {p.teamSize}
+                Category: {p.category}
+                {p.technologies && p.technologies.length > 0 && (
+                  <> | Tech: {p.technologies.slice(0, 3).join(", ")}{p.technologies.length > 3 ? "..." : ""}</>
+                )}
               </p>
+              {p.description && (
+                <p className="text-xs text-muted-foreground mt-1">{p.description}</p>
+              )}
             </div>
           ))}
         </div>
@@ -650,35 +674,60 @@ function ResumeCompletenessScore({ resume }: { resume: typeof mockStudentData.re
   )
 }
 
-const mockInternships: Internship[] = [
-  {
-    company: "Apple",
-    role: "Hardware Engineering Intern",
-    startDate: "2025-06-01",
-    endDate: "2025-08-15",
-    description: "Worked on testing electrical sub-systems for XR products."
-  },
-  {
-    company: "Google",
-    role: "Software Engineering Intern",
-    startDate: "2024-06-01",
-    endDate: "2024-08-15",
-    description: "Implemented a dashboard for analytics tools using React."
-  },
-]
-
-interface Internship {
+interface Experience {
   company: string
   role: string
-  startDate: string // ISO string
+  startDate: string
   endDate?: string
   description?: string
+  technologies?: string[]
+  type: "internship" | "job" | "research" | "startup" | "other"
 }
 
-function InternshipSummary({ internships }: { internships: Internship[] }) {
-  const internshipCount = internships.length
+// Helper function to categorize experience type
+function categorizeExperience(position: string, company: string): Experience["type"] {
+  const posLower = position?.toLowerCase() || ""
+  const compLower = company?.toLowerCase() || ""
+  
+  if (posLower.includes("intern") || posLower.includes("co-op") || posLower.includes("coop")) {
+    return "internship"
+  }
+  if (posLower.includes("research") || posLower.includes("researcher") || compLower.includes("research")) {
+    return "research"
+  }
+  if (posLower.includes("founder") || posLower.includes("co-founder") || compLower.includes("startup")) {
+    return "startup"
+  }
+  return "job"
+}
 
-  const getInternshipStatus = (count: number) => {
+// Parse all experience from resume experience data
+function parseExperienceFromResume(resumeData: any): Experience[] {
+  if (!resumeData?.experience || resumeData.experience.length === 0) return []
+  
+  // Include all experience positions
+  return resumeData.experience
+    .map((exp: any) => ({
+      company: exp.company || "Unknown Company",
+      role: exp.position || "Position",
+      startDate: exp.start_date || "",
+      endDate: exp.end_date || undefined,
+      description: exp.responsibilities?.[0] || exp.achievements?.[0] || "",
+      technologies: exp.technologies || [],
+      type: categorizeExperience(exp.position || "", exp.company || ""),
+    }))
+}
+
+function ExperienceSummary({ experiences }: { experiences: Experience[] }) {
+  const experienceCount = experiences.length
+  
+  // Count by type
+  const typeCounts = experiences.reduce((acc, exp) => {
+    acc[exp.type] = (acc[exp.type] || 0) + 1
+    return acc
+  }, {} as Record<string, number>)
+
+  const getExperienceStatus = (count: number) => {
     if (count === 0) return {
       message: "No worries! Everyone starts somewhere. We'll help you land your first opportunity!",
       color: "text-blue-600",
@@ -686,7 +735,7 @@ function InternshipSummary({ internships }: { internships: Internship[] }) {
       borderColor: "border-blue-200 dark:border-blue-900",
       icon: Briefcase
     }
-    if (count === 1) return {
+    if (count >= 1 && count <= 2) return {
       message: "Great start! Previous experience makes future opportunities easier to secure.",
       color: "text-green-600",
       bgColor: "bg-green-50 dark:bg-green-950/20",
@@ -702,43 +751,71 @@ function InternshipSummary({ internships }: { internships: Internship[] }) {
     }
   }
 
-  const status = getInternshipStatus(internshipCount)
+  const getExperienceTypeBadge = (type: Experience["type"]) => {
+    const badges = {
+      internship: { label: "Internship", color: "bg-blue-500" },
+      job: { label: "Job", color: "bg-green-500" },
+      research: { label: "Research", color: "bg-purple-500" },
+      startup: { label: "Startup", color: "bg-orange-500" },
+      other: { label: "Other", color: "bg-gray-500" },
+    }
+    return badges[type] || badges.other
+  }
+
+  const status = getExperienceStatus(experienceCount)
   const Icon = status.icon
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Internship Experience</CardTitle>
-        <CardDescription>Insights into your previous internships</CardDescription>
+        <CardTitle>Work Experience</CardTitle>
+        <CardDescription>All your professional experience including internships, jobs, research, and startups</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Total internships */}
+        {/* Total experience */}
         <div className="flex items-center justify-center">
           <div className="text-center">
-            <p className="text-6xl font-bold">{internshipCount}</p>
+            <p className="text-6xl font-bold">{experienceCount}</p>
             <p className="text-muted-foreground">
-              {internshipCount === 1 ? "Internship" : "Internships"}
+              {experienceCount === 1 ? "Experience" : "Experiences"}
             </p>
           </div>
         </div>
 
         {/* Status box */}
         <div className={cn("p-4 rounded-lg border", status.bgColor, status.borderColor)}>
-          <p className={cn("text-sm font-medium", status.color)}>{status.message}</p>
+          <div className="space-y-2">
+            <p className={cn("text-sm font-medium", status.color)}>{status.message}</p>
+            {Object.keys(typeCounts).length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Types: {Object.entries(typeCounts).map(([type, count]) => `${type.charAt(0).toUpperCase() + type.slice(1)} (${count})`).join(", ")}
+              </p>
+            )}
+          </div>
         </div>
 
-        {/* Internship list */}
+        {/* Experience list */}
         <div className="space-y-2 max-h-64 overflow-y-auto">
-          {internships.map((i, idx) => (
+          {experiences.map((i, idx) => (
             <div
               key={idx}
               className="p-2 border rounded-lg flex flex-col bg-muted/5 dark:bg-muted/20"
             >
-              <p className="font-semibold">{i.role} @ {i.company}</p>
+              <div className="flex items-start justify-between">
+                <p className="font-semibold">{i.role} @ {i.company}</p>
+                <Badge className={cn("text-xs", getExperienceTypeBadge(i.type).color, "text-white")}>
+                  {getExperienceTypeBadge(i.type).label}
+                </Badge>
+              </div>
               <p className="text-xs text-muted-foreground">
-                {new Date(i.startDate).toLocaleDateString()} 
-                {i.endDate ? ` - ${new Date(i.endDate).toLocaleDateString()}` : " - Present"}
+                {i.startDate ? new Date(i.startDate).toLocaleDateString() : "N/A"}
+                {i.endDate ? ` - ${new Date(i.endDate).toLocaleDateString()}` : i.startDate ? " - Present" : ""}
               </p>
+              {i.technologies && i.technologies.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Tech: {i.technologies.slice(0, 4).join(", ")}{i.technologies.length > 4 ? "..." : ""}
+                </p>
+              )}
               {i.description && (
                 <p className="text-xs text-muted-foreground mt-1">{i.description}</p>
               )}
@@ -921,6 +998,10 @@ export default function DashboardPage() {
       hasExtracurriculars: (resumeData.extracurriculars?.length || 0) > 0,
     },
   } : mockStudentData
+
+  // Parse projects and experience from resume data
+  const projects = resumeData ? parseProjectsFromResume(resumeData) : []
+  const experiences = resumeData ? parseExperienceFromResume(resumeData) : []
 
   // Show loading state
   if (isLoading) {
@@ -1116,7 +1197,7 @@ export default function DashboardPage() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <ProjectPortfolioSummary projects={mockProjects} />
+                  <ProjectPortfolioSummary projects={projects} />
                 </AccordionContent>
               </AccordionItem>
 
@@ -1135,16 +1216,16 @@ export default function DashboardPage() {
           </TabsContent>
 
           <TabsContent value="experience" className="space-y-6">
-            <Accordion type="multiple" className="space-y-4" defaultValue={["internships", "roles"]}>
-              <AccordionItem value="internships" className="border rounded-lg px-4">
+            <Accordion type="multiple" className="space-y-4" defaultValue={["experience", "roles"]}>
+              <AccordionItem value="experience" className="border rounded-lg px-4">
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-2">
                     <Briefcase className="h-5 w-5 text-primary" />
-                    <span className="font-semibold">Internship Experience</span>
+                    <span className="font-semibold">Work Experience</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <InternshipSummary internships={mockInternships} />
+                  <ExperienceSummary experiences={experiences} />
                 </AccordionContent>
               </AccordionItem>
 
