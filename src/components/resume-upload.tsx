@@ -34,7 +34,7 @@ interface ParseResult {
 }
 
 export function ResumeUpload() {
-  const { setResumeData, setCurrentFileName } = useResume()
+  const { setResumeData, setCurrentFileName, refreshResumeData } = useResume()
   const router = useRouter()
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null)
   const [isUploading, setIsUploading] = useState(false)
@@ -98,12 +98,12 @@ export function ResumeUpload() {
     } catch (error) {
       console.error("Upload error details:", error)
       setUploadStatus("error")
-      
+
       let errorMsg = "Failed to upload file. Please try again."
       if (error instanceof Error) {
         errorMsg = error.message
       }
-      
+
       setErrorMessage(errorMsg)
       toast.error(errorMsg)
     } finally {
@@ -246,6 +246,26 @@ export function ResumeUpload() {
         console.error("Error matching coursework:", matchError)
         // We continue even if matching fails, as basic resume data is saved
       }
+
+      // 3. Pre-compute XYZ Analysis for all projects and experiences
+      setProcessingMessage("Analyzing bullet points with AI...")
+      try {
+        const xyzResponse = await fetch("/api/analyze/xyz-batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ resumeData: data }),
+        })
+        const xyzResult = await xyzResponse.json()
+        if (!xyzResult.success) {
+          console.warn("XYZ batch analysis completed with warnings")
+        }
+      } catch (xyzError) {
+        console.error("Error in XYZ batch analysis:", xyzError)
+        // Continue even if analysis fails — dashboard will just not show feedback
+      }
+
+      // 4. Refresh context so it picks up cached XYZ feedback + insights
+      await refreshResumeData()
 
       clearInterval(messageInterval)
       setProgress(100)

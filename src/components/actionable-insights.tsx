@@ -4,36 +4,21 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Lightbulb, Save, CheckCircle2, AlertTriangle, Info } from "lucide-react"
+import { Lightbulb, Save, CheckCircle2, AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import type { ActionableInsight } from "@/lib/qualityAnalysis"
+
+interface ActionableInsight {
+    id: string
+    category: string
+    insight: string
+    priority: "high" | "low"
+    checked: boolean
+}
 
 interface ActionableInsightsProps {
     insights: ActionableInsight[]
     onInsightsChange?: (insights: ActionableInsight[]) => void
-}
-
-const categoryColors: Record<string, { bg: string; text: string; border: string }> = {
-    projects: { bg: "bg-blue-50/50 dark:bg-blue-950/20", text: "text-blue-700 dark:text-blue-400", border: "border-blue-200/50 dark:border-blue-900/50" },
-    experience: { bg: "bg-indigo-50/50 dark:bg-indigo-950/20", text: "text-indigo-700 dark:text-indigo-400", border: "border-indigo-200/50 dark:border-indigo-900/50" },
-    skills: { bg: "bg-slate-50/50 dark:bg-slate-900/50", text: "text-slate-700 dark:text-slate-400", border: "border-slate-200/50 dark:border-slate-800/50" },
-    links: { bg: "bg-zinc-50/50 dark:bg-zinc-900/50", text: "text-zinc-700 dark:text-zinc-400", border: "border-zinc-200/50 dark:border-zinc-800/50" },
-    gpa: { bg: "bg-emerald-50/50 dark:bg-emerald-950/20", text: "text-emerald-700 dark:text-emerald-400", border: "border-emerald-200/50 dark:border-emerald-900/50" },
-    coursework: { bg: "bg-sky-50/50 dark:bg-sky-950/20", text: "text-sky-700 dark:text-sky-400", border: "border-sky-200/50 dark:border-sky-900/50" },
-}
-
-const priorityIcons = {
-    high: AlertTriangle,
-    medium: Info,
-    low: Lightbulb,
-}
-
-const priorityColors = {
-    high: "text-red-500",
-    medium: "text-amber-500",
-    low: "text-blue-500",
 }
 
 export function ActionableInsights({ insights: initialInsights, onInsightsChange }: ActionableInsightsProps) {
@@ -85,15 +70,11 @@ export function ActionableInsights({ insights: initialInsights, onInsightsChange
     const totalCount = insights.length
     const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
 
-    // Group insights by priority
+    // Group by priority: high = critical, low = nice to have
     const highPriority = insights.filter(i => i.priority === "high")
-    const mediumPriority = insights.filter(i => i.priority === "medium")
     const lowPriority = insights.filter(i => i.priority === "low")
 
     const renderInsightItem = (insight: ActionableInsight) => {
-        const colors = categoryColors[insight.category]
-        const PriorityIcon = priorityIcons[insight.priority]
-
         return (
             <div
                 key={insight.id}
@@ -101,7 +82,7 @@ export function ActionableInsights({ insights: initialInsights, onInsightsChange
                     "flex items-start gap-3 p-3 rounded-lg border transition-all",
                     insight.checked
                         ? "bg-muted/30 border-muted opacity-60"
-                        : cn(colors.bg, colors.border)
+                        : "border-border"
                 )}
             >
                 <Checkbox
@@ -110,23 +91,15 @@ export function ActionableInsights({ insights: initialInsights, onInsightsChange
                     onCheckedChange={() => handleToggle(insight.id)}
                     className="mt-0.5"
                 />
-                <div className="flex-1 min-w-0">
-                    <label
-                        htmlFor={insight.id}
-                        className={cn(
-                            "text-sm cursor-pointer block",
-                            insight.checked && "line-through text-muted-foreground"
-                        )}
-                    >
-                        {insight.insight}
-                    </label>
-                    <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline" className={cn("text-xs capitalize", colors.text)}>
-                            {insight.category}
-                        </Badge>
-                    </div>
-                </div>
-                <PriorityIcon className={cn("h-4 w-4 flex-shrink-0", priorityColors[insight.priority])} />
+                <label
+                    htmlFor={insight.id}
+                    className={cn(
+                        "text-sm cursor-pointer block flex-1",
+                        insight.checked && "line-through text-muted-foreground"
+                    )}
+                >
+                    {insight.insight}
+                </label>
             </div>
         )
     }
@@ -136,13 +109,13 @@ export function ActionableInsights({ insights: initialInsights, onInsightsChange
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <Lightbulb className="h-5 w-5 text-yellow-500" />
+                        <Lightbulb className="h-5 w-5" />
                         Actionable Insights
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="text-center py-8 text-muted-foreground">
-                        <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-green-500" />
+                        <CheckCircle2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
                         <p className="font-medium">Your resume looks great!</p>
                         <p className="text-sm mt-1">No improvements suggested at this time.</p>
                     </div>
@@ -157,11 +130,11 @@ export function ActionableInsights({ insights: initialInsights, onInsightsChange
                 <div className="flex items-center justify-between">
                     <div>
                         <CardTitle className="flex items-center gap-2">
-                            <Lightbulb className="h-5 w-5 text-yellow-500" />
+                            <Lightbulb className="h-5 w-5" />
                             Actionable Insights
                         </CardTitle>
                         <CardDescription>
-                            Improvements to boost your resume score
+                            AI-generated recommendations based on your resume analysis
                         </CardDescription>
                     </div>
                     <div className="flex items-center gap-3">
@@ -183,18 +156,18 @@ export function ActionableInsights({ insights: initialInsights, onInsightsChange
                 {/* Progress bar */}
                 <div className="w-full h-2 bg-muted rounded-full overflow-hidden mt-4">
                     <div
-                        className="h-full bg-green-500 transition-all duration-500"
+                        className="h-full bg-foreground transition-all duration-500"
                         style={{ width: `${progressPercent}%` }}
                     />
                 </div>
             </CardHeader>
 
             <CardContent className="space-y-4">
-                {/* High Priority */}
+                {/* High Priority — red icon */}
                 {highPriority.length > 0 && (
                     <div className="space-y-2">
-                        <h4 className="text-sm font-semibold flex items-center gap-2 text-red-600">
-                            <AlertTriangle className="h-4 w-4" />
+                        <h4 className="text-sm font-semibold flex items-center gap-2">
+                            <AlertTriangle className="h-4 w-4 text-red-500" />
                             High Priority ({highPriority.filter(i => !i.checked).length} remaining)
                         </h4>
                         <div className="space-y-2">
@@ -203,24 +176,11 @@ export function ActionableInsights({ insights: initialInsights, onInsightsChange
                     </div>
                 )}
 
-                {/* Medium Priority */}
-                {mediumPriority.length > 0 && (
-                    <div className="space-y-2">
-                        <h4 className="text-sm font-semibold flex items-center gap-2 text-amber-600">
-                            <Info className="h-4 w-4" />
-                            Recommended ({mediumPriority.filter(i => !i.checked).length} remaining)
-                        </h4>
-                        <div className="space-y-2">
-                            {mediumPriority.map(renderInsightItem)}
-                        </div>
-                    </div>
-                )}
-
-                {/* Low Priority */}
+                {/* Nice to Have — green icon */}
                 {lowPriority.length > 0 && (
                     <div className="space-y-2">
-                        <h4 className="text-sm font-semibold flex items-center gap-2 text-blue-600">
-                            <Lightbulb className="h-4 w-4" />
+                        <h4 className="text-sm font-semibold flex items-center gap-2">
+                            <Lightbulb className="h-4 w-4 text-green-500" />
                             Nice to Have ({lowPriority.filter(i => !i.checked).length} remaining)
                         </h4>
                         <div className="space-y-2">

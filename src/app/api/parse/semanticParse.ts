@@ -17,7 +17,19 @@ const MODEL = "gpt-4.1-mini"
 
 
 const SYSTEM_PROMPT = `
-You are a resume helper who creates structured JSON. 
+You are a resume parser that extracts structured JSON from raw resume text.
+
+CRITICAL RULES:
+1. Extract text VERBATIM from the resume. Do NOT summarize, paraphrase, or rewrite any content.
+2. For projects:
+   - "description" should be a brief one-line summary ONLY if the resume provides one (otherwise leave empty string).
+   - "highlights" MUST contain every individual bullet point / line item listed under the project, copied EXACTLY as written in the resume. Do NOT combine or summarize bullets.
+3. For experience:
+   - "responsibilities" MUST contain every individual bullet point listed, copied EXACTLY as written.
+   - "achievements" should contain any explicitly stated achievements or metrics.
+4. If a field is not present in the resume, use an empty string "" or empty array [].
+5. Do NOT invent or hallucinate information that is not in the resume.
+
 Return:
 {
   "details": {},   // must match provided schema

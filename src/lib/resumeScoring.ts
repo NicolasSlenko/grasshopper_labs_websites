@@ -65,9 +65,32 @@ function combineScores(qualityScore: number, quantityScore: number): number {
 }
 
 /**
+ * Calculate quantity score based on ideal count with diminishing returns
+ */
+function quantityScore(count: number, ideal: number): number {
+  if (count === 0) return 0
+  if (count >= ideal) return 100
+  return Math.round((count / ideal) * 100)
+}
+
+interface XYZFeedbackItem {
+  score: number
+  xyz_analysis: string
+  improvements: string[]
+}
+
+interface XYZFeedbackData {
+  projects: Record<number, XYZFeedbackItem>
+  experience: Record<number, XYZFeedbackItem>
+}
+
+/**
  * Calculate comprehensive resume score with quality + quantity breakdown
  */
-export function calculateResumeScoreDetailed(resume: Resume): ResumeScoreResult {
+export function calculateResumeScoreDetailed(
+  resume: Resume,
+  xyzFeedback?: XYZFeedbackData | null
+): ResumeScoreResult {
   // Analyze each category
   const projectAnalysis = analyzeProjectQuality(resume.projects)
   const experienceAnalysis = analyzeExperienceQuality(resume.experience)
@@ -76,9 +99,35 @@ export function calculateResumeScoreDetailed(resume: Resume): ResumeScoreResult 
   const gpaAnalysis = analyzeGPAQuality(resume.education?.[0]?.gpa || 0)
   const courseworkAnalysis = analyzeCourseworkQuality(resume.education)
 
+  // Calculate AI-enhanced quality scores if XYZ feedback is available
+  let projectQuality = projectAnalysis.qualityScore
+  let experienceQuality = experienceAnalysis.qualityScore
+
+  if (xyzFeedback) {
+    // Average AI scores for projects
+    const projectScores = Object.values(xyzFeedback.projects || {})
+    if (projectScores.length > 0) {
+      const avgProjectAI = projectScores.reduce((sum, p) => sum + p.score, 0) / projectScores.length
+      // Blend: 50% heuristic + 50% AI
+      projectQuality = Math.round(projectAnalysis.qualityScore * 0.5 + avgProjectAI * 0.5)
+    }
+
+    // Average AI scores for experience
+    const expScores = Object.values(xyzFeedback.experience || {})
+    if (expScores.length > 0) {
+      const avgExpAI = expScores.reduce((sum, e) => sum + e.score, 0) / expScores.length
+      // Blend: 50% heuristic + 50% AI
+      experienceQuality = Math.round(experienceAnalysis.qualityScore * 0.5 + avgExpAI * 0.5)
+    }
+  }
+
+  // Quantity scoring: ideal 3 projects, 2 experiences
+  const projectQuantity = quantityScore(resume.projects?.length || 0, 3)
+  const experienceQuantity = quantityScore(resume.experience?.length || 0, 2)
+
   // Calculate combined scores
-  const projectsCombined = combineScores(projectAnalysis.qualityScore, projectAnalysis.quantityScore)
-  const experienceCombined = combineScores(experienceAnalysis.qualityScore, experienceAnalysis.quantityScore)
+  const projectsCombined = combineScores(projectQuality, projectQuantity)
+  const experienceCombined = combineScores(experienceQuality, experienceQuantity)
   const skillsCombined = combineScores(skillsAnalysis.qualityScore, skillsAnalysis.quantityScore)
   const linksCombined = linksAnalysis.qualityScore // Links only have quality (presence check)
   const gpaCombined = gpaAnalysis.score // GPA is threshold-based
@@ -88,16 +137,16 @@ export function calculateResumeScoreDetailed(resume: Resume): ResumeScoreResult 
   const breakdown: ScoreBreakdown[] = [
     {
       category: 'Projects',
-      qualityScore: projectAnalysis.qualityScore,
-      quantityScore: projectAnalysis.quantityScore,
+      qualityScore: projectQuality,
+      quantityScore: projectQuantity,
       combinedScore: projectsCombined,
       weight: WEIGHTS.projects,
       contribution: Math.round(projectsCombined * WEIGHTS.projects / 100)
     },
     {
       category: 'Experience',
-      qualityScore: experienceAnalysis.qualityScore,
-      quantityScore: experienceAnalysis.quantityScore,
+      qualityScore: experienceQuality,
+      quantityScore: experienceQuantity,
       combinedScore: experienceCombined,
       weight: WEIGHTS.experience,
       contribution: Math.round(experienceCombined * WEIGHTS.experience / 100)

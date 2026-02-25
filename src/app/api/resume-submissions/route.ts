@@ -174,6 +174,10 @@ export async function DELETE() {
       }
     }
 
+    // Also delete the parsed resume data and cached feedback
+    await deleteFromS3(`uploads/${userId}/resume-data.json`).catch(() => { })
+    await deleteFromS3(`uploads/${userId}/xyz-feedback.json`).catch(() => { })
+
     return NextResponse.json({
       success: true,
       message: "All submissions cleared",

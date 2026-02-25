@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from "recharts"
 import { cn } from "@/lib/utils"
-import { Loader2, Check, X } from "lucide-react"
+import { Loader2, Check, X, Star } from "lucide-react"
 import { useResume } from "@/contexts/resume-context"
 
 interface CourseMatch {
@@ -39,7 +39,49 @@ const DEFAULT_CATEGORIES = [
   "Theory & Math",
 ]
 
-export function CareerPathCourseworkChart() {
+// Hardcoded: which categories are most important for each role type
+const ROLE_TO_CATEGORIES: Record<string, string[]> = {
+  "Frontend Developer": ["Software Engineering", "Graphics & Media"],
+  "Backend Developer": ["Software Engineering", "Data & Databases", "Systems & Hardware"],
+  "Full Stack Developer": ["Software Engineering", "Data & Databases"],
+  "Mobile Developer": ["Software Engineering", "Graphics & Media"],
+  "DevOps Engineer": ["Systems & Hardware", "Security & Privacy", "Software Engineering"],
+  "Data Engineer": ["Data & Databases", "Systems & Hardware", "Software Engineering"],
+  "Data Scientist": ["AI & Machine Learning", "Data & Databases", "Theory & Math"],
+  "Machine Learning Engineer": ["AI & Machine Learning", "Theory & Math", "Data & Databases"],
+  "Security Engineer": ["Security & Privacy", "Systems & Hardware", "Core CS"],
+  "QA / Test Engineer": ["Software Engineering", "Core CS"],
+  "Product Manager": ["Software Engineering", "Core CS"],
+  "Engineering Manager": ["Software Engineering", "Core CS"],
+  "Solutions Architect": ["Systems & Hardware", "Software Engineering", "Data & Databases"],
+  "UI/UX Designer": ["Graphics & Media", "Software Engineering"],
+}
+
+// Hardcoded: which categories map to each tech sector
+const SECTOR_TO_CATEGORIES: Record<string, string[]> = {
+  "Artificial Intelligence / Machine Learning": ["AI & Machine Learning", "Theory & Math"],
+  "Cloud Computing": ["Systems & Hardware", "Software Engineering"],
+  "Cybersecurity": ["Security & Privacy", "Systems & Hardware"],
+  "Data Science / Analytics": ["Data & Databases", "AI & Machine Learning", "Theory & Math"],
+  "DevOps / Infrastructure": ["Systems & Hardware", "Software Engineering"],
+  "E-commerce": ["Software Engineering", "Data & Databases"],
+  "FinTech": ["Security & Privacy", "Data & Databases", "Software Engineering"],
+  "HealthTech": ["Data & Databases", "Security & Privacy", "AI & Machine Learning"],
+  "Mobile Development": ["Software Engineering", "Graphics & Media"],
+  "Web Development": ["Software Engineering", "Data & Databases"],
+  "Gaming": ["Graphics & Media", "Systems & Hardware", "AI & Machine Learning"],
+  "IoT (Internet of Things)": ["Systems & Hardware", "Security & Privacy"],
+  "Blockchain / Crypto": ["Security & Privacy", "Systems & Hardware", "Theory & Math"],
+  "EdTech": ["Software Engineering", "AI & Machine Learning"],
+}
+
+export function CareerPathCourseworkChart({
+  roleTypes = [],
+  techSectors = [],
+}: {
+  roleTypes?: string[]
+  techSectors?: string[]
+}) {
   const { resumeData } = useResume()
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [matchedCourses, setMatchedCourses] = useState<Record<string, CourseMatch[]>>({})
@@ -59,7 +101,7 @@ export function CareerPathCourseworkChart() {
 
       if (data.success) {
         setMatchedCourses(data.byCategory)
-        
+
         // Also get all UF courses categorized
         if (data.allUFCourses) {
           const categorized: Record<string, Array<{ name: string; code: string }>> = {}
@@ -71,7 +113,7 @@ export function CareerPathCourseworkChart() {
           })
           setAllUFCoursesByCategory(categorized)
         }
-        
+
         console.log("Loaded matched courses from cache:", data.byCategory)
       } else {
         setError(data.message || "Failed to load course matches")
@@ -106,9 +148,9 @@ export function CareerPathCourseworkChart() {
     if (!matchedCourses || !allUFCoursesByCategory) return 0
     const takenCourses = matchedCourses[category] || []
     const availableCourses = allUFCoursesByCategory[category] || []
-    
+
     if (availableCourses.length === 0) return 0
-    
+
     // Percentage = (taken / available) * 100
     return Math.round((takenCourses.length / availableCourses.length) * 100)
   }
@@ -132,13 +174,44 @@ export function CareerPathCourseworkChart() {
     return allUFCoursesByCategory[category] || []
   }
 
+  // Compute recommended categories from survey
+  const recommendedCategories = new Set<string>()
+  for (const role of roleTypes) {
+    for (const cat of (ROLE_TO_CATEGORIES[role] || [])) {
+      recommendedCategories.add(cat)
+    }
+  }
+  for (const sector of techSectors) {
+    for (const cat of (SECTOR_TO_CATEGORIES[sector] || [])) {
+      recommendedCategories.add(cat)
+    }
+  }
+
+  // Get recommended untaken courses
+  const getRecommendedCourses = () => {
+    const recs: Array<{ code: string; name: string; category: string }> = []
+    for (const category of Array.from(recommendedCategories)) {
+      const allCourses = getAllCoursesForCategory(category)
+      for (const course of allCourses) {
+        if (!isCourseTaken(category, course.code)) {
+          recs.push({ ...course, category })
+        }
+      }
+    }
+    return recs
+  }
+
+  const isCategoryRecommended = (category: string) => recommendedCategories.has(category)
+
+  const recommendedCourses = getRecommendedCourses()
+
   // Toggle course completion (check/uncheck)
   const toggleCourse = async (category: string, courseCode: string, courseName: string) => {
     const isTaken = isCourseTaken(category, courseCode)
     const action = isTaken ? "uncheck" : "check"
-    
+
     setIsSaving(true)
-    
+
     try {
       const response = await fetch("/api/toggle-course", {
         method: "POST",
@@ -219,7 +292,8 @@ export function CareerPathCourseworkChart() {
             </button>
             {DEFAULT_CATEGORIES.map((category) => {
               const completion = getCategoryCompletion(category)
-              
+              const recommended = isCategoryRecommended(category)
+
               return (
                 <button
                   key={category}
@@ -228,9 +302,12 @@ export function CareerPathCourseworkChart() {
                     "px-4 py-2 rounded-lg border-2 transition-all font-medium flex items-center gap-2",
                     selectedCategory === category
                       ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-background hover:border-primary/50"
+                      : recommended
+                        ? "border-amber-400 bg-amber-50 dark:bg-amber-950/20 hover:border-amber-500"
+                        : "border-border bg-background hover:border-primary/50"
                   )}
                 >
+                  {recommended && <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />}
                   {category}
                   <Badge variant={selectedCategory === category ? "outline" : "secondary"} className={selectedCategory === category ? "bg-primary-foreground text-primary" : ""}>
                     {completion}%
@@ -246,8 +323,8 @@ export function CareerPathCourseworkChart() {
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart cx="50%" cy="50%" outerRadius="80%" data={categoryRadarData}>
                   <PolarGrid />
-                  <PolarAngleAxis 
-                    dataKey="category" 
+                  <PolarAngleAxis
+                    dataKey="category"
                     tick={{ fontSize: 11 }}
                   />
                   <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} />
@@ -266,17 +343,17 @@ export function CareerPathCourseworkChart() {
             {/* Right: Course list filtered by category */}
             <div className="flex-1 space-y-3 max-h-96 overflow-y-auto">
               <h3 className="text-lg font-semibold mb-2 sticky top-0 bg-background z-10 pb-2">
-                {selectedCategory 
-                  ? `${selectedCategory} Courses` 
+                {selectedCategory
+                  ? `${selectedCategory} Courses`
                   : "All Courses"}
               </h3>
-              
+
               {selectedCategory ? (
                 // Show all courses for selected category with taken/not taken status
                 <>
                   {getAllCoursesForCategory(selectedCategory).map((course) => {
                     const taken = isCourseTaken(selectedCategory, course.code)
-                    
+
                     return (
                       <button
                         key={course.code}
@@ -286,8 +363,8 @@ export function CareerPathCourseworkChart() {
                           "w-full flex items-center gap-3 p-3 rounded-lg border-2 transition-all",
                           "hover:shadow-md active:scale-[0.98]",
                           "disabled:opacity-50 disabled:cursor-not-allowed",
-                          taken 
-                            ? "border-green-500 bg-green-50 dark:bg-green-950/20 hover:border-green-600" 
+                          taken
+                            ? "border-green-500 bg-green-50 dark:bg-green-950/20 hover:border-green-600"
                             : "border-gray-300 bg-gray-50 dark:bg-gray-950/20 hover:border-gray-400"
                         )}
                       >
@@ -336,7 +413,7 @@ export function CareerPathCourseworkChart() {
                     const allCourses = getAllCoursesForCategory(category)
                     const takenCourses = matchedCourses[category] || []
                     if (allCourses.length === 0) return null
-                    
+
                     return (
                       <div key={category} className="mb-4">
                         <h4 className="text-sm font-semibold text-muted-foreground mb-2">
@@ -354,8 +431,8 @@ export function CareerPathCourseworkChart() {
                                   "w-full flex items-center gap-2 p-2 rounded-lg border transition-all",
                                   "hover:shadow-sm active:scale-[0.98]",
                                   "disabled:opacity-50 disabled:cursor-not-allowed",
-                                  taken 
-                                    ? "border-green-500/50 bg-green-50/50 dark:bg-green-950/10 hover:border-green-500" 
+                                  taken
+                                    ? "border-green-500/50 bg-green-50/50 dark:bg-green-950/10 hover:border-green-500"
                                     : "border-gray-300/50 bg-gray-50/50 dark:bg-gray-950/10 hover:border-gray-400"
                                 )}
                               >
@@ -397,6 +474,45 @@ export function CareerPathCourseworkChart() {
               )}
             </div>
           </div>
+
+          {/* Recommended Courses section */}
+          {recommendedCategories.size > 0 && recommendedCourses.length > 0 && (
+            <div className="border-t pt-4 mt-2">
+              <h3 className="text-lg font-semibold flex items-center gap-2 mb-3">
+                <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
+                Recommended for Your Career Path
+              </h3>
+              <p className="text-sm text-muted-foreground mb-3">
+                Based on your interest in{" "}
+                {roleTypes.length > 0 && <span className="font-medium text-foreground">{roleTypes.slice(0, 2).join(", ")}{roleTypes.length > 2 ? " + more" : ""}</span>}
+                {roleTypes.length > 0 && techSectors.length > 0 && " and "}
+                {techSectors.length > 0 && <span className="font-medium text-foreground">{techSectors.slice(0, 2).join(", ")}{techSectors.length > 2 ? " + more" : ""}</span>}
+              </p>
+              <div className="grid sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto">
+                {recommendedCourses.slice(0, 12).map((course) => (
+                  <button
+                    key={`${course.category}-${course.code}`}
+                    onClick={() => {
+                      setSelectedCategory(course.category)
+                    }}
+                    className="flex items-center gap-2 p-2.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/20 hover:border-amber-400 transition-all text-left"
+                  >
+                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">{course.code}</div>
+                      <div className="text-xs text-muted-foreground truncate">{course.name}</div>
+                    </div>
+                    <Badge variant="outline" className="text-xs flex-shrink-0">{course.category.split(" ")[0]}</Badge>
+                  </button>
+                ))}
+              </div>
+              {recommendedCourses.length > 12 && (
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  + {recommendedCourses.length - 12} more recommended courses — click category buttons above to explore
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

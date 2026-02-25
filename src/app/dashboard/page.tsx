@@ -24,13 +24,16 @@ import {
   Pie,
   Cell,
 } from "recharts"
+import { useUser } from "@clerk/nextjs"
 import { useResume } from "@/contexts/resume-context"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import type { QuestionnaireData } from "@/app/questionnaire/data"
 import { ActionableInsights } from "@/components/actionable-insights"
-import { calculateResumeScoreDetailed, getScoreStatus, getImprovementMessage, type ResumeScoreResult } from "@/lib/resumeScoring"
+import { calculateResumeScoreDetailed, getScoreStatus, getImprovementMessage, getScoreBreakdown, type ResumeScoreResult } from "@/lib/resumeScoring"
+import { useSignInLogger } from "@/hooks/use-signin-logger"
+import { XYZInlineFeedback } from "@/components/xyz-inline-feedback"
 
 // Mock data - replace with actual resume data later
 const mockStudentData = {
@@ -672,11 +675,15 @@ const sectorToCategories: Record<string, string[]> = {
 function ProjectPortfolioSummary({
   projects,
   roleTypes = [],
-  techSectors = []
+  techSectors = [],
+  xyzFeedback,
+  showFeedback = true
 }: {
   projects: Project[]
   roleTypes?: string[]
   techSectors?: string[]
+  xyzFeedback?: Record<number, { score: number; xyz_analysis: string; improvements: string[] }>
+  showFeedback?: boolean
 }) {
   const projectCount = projects.length
 
@@ -780,7 +787,7 @@ function ProjectPortfolioSummary({
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Stats Row */}
-        <div className="grid grid-cols-3 gap-4 text-center">
+        <div className="grid grid-cols-2 gap-4 text-center">
           <div>
             <p className="text-4xl font-bold">{projectCount}</p>
             <p className="text-sm text-muted-foreground">Projects</p>
@@ -788,10 +795,6 @@ function ProjectPortfolioSummary({
           <div>
             <p className="text-4xl font-bold">{categoryDiversity}</p>
             <p className="text-sm text-muted-foreground">Categories</p>
-          </div>
-          <div>
-            <p className="text-4xl font-bold text-primary">{score}</p>
-            <p className="text-sm text-muted-foreground">Score</p>
           </div>
         </div>
 
@@ -818,7 +821,7 @@ function ProjectPortfolioSummary({
         </div>
 
         {/* Project List */}
-        <div className="space-y-3 max-h-80 overflow-y-auto">
+        <div className="space-y-3">
           {projects.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <FolderKanban className="h-12 w-12 mx-auto mb-3 opacity-50" />
@@ -831,14 +834,20 @@ function ProjectPortfolioSummary({
                 key={i}
                 className="p-3 border rounded-lg bg-muted/5 dark:bg-muted/20 space-y-2"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-semibold">{p.name}</p>
-                    {p.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{p.description}</p>
-                    )}
-                  </div>
+                <div>
+                  <p className="font-semibold">{p.name}</p>
+                  {p.description && (
+                    <p className="text-sm text-muted-foreground mt-1">{p.description}</p>
+                  )}
                 </div>
+                {/* Project bullet points */}
+                {p.highlights && p.highlights.length > 0 && (
+                  <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
+                    {p.highlights.map((h: string, hIdx: number) => (
+                      <li key={hIdx}>{h}</li>
+                    ))}
+                  </ul>
+                )}
                 {p.technologies.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {p.technologies.slice(0, 6).map((tech, idx) => (
@@ -865,6 +874,10 @@ function ProjectPortfolioSummary({
                     )}
                   </div>
                 )}
+                {/* Inline XYZ Analysis */}
+                {showFeedback && xyzFeedback?.[i] && (
+                  <XYZInlineFeedback feedback={xyzFeedback[i]} />
+                )}
               </div>
             ))
           )}
@@ -885,6 +898,9 @@ interface ResumeScoreProps {
   roleTypes?: string[]
   techSectors?: string[]
   resumeData?: any
+  aiInsights?: { id: string; category: string; insight: string; priority: "high" | "low"; checked: boolean }[]
+  xyzFeedback?: { projects: Record<number, any>; experience: Record<number, any> } | null
+  showFeedback?: boolean
 }
 
 function OverallResumeScore({
@@ -896,10 +912,13 @@ function OverallResumeScore({
   courseworkCategories = 0,
   roleTypes = [],
   techSectors = [],
-  resumeData
+  resumeData,
+  aiInsights = [],
+  xyzFeedback = null,
+  showFeedback = true,
 }: ResumeScoreProps) {
   // Use new scoring system if resumeData is available
-  const scoreResult: ResumeScoreResult | null = resumeData ? calculateResumeScoreDetailed(resumeData) : null
+  const scoreResult: ResumeScoreResult | null = resumeData ? calculateResumeScoreDetailed(resumeData, xyzFeedback) : null
 
   // Fall back to old scoring if no resumeData
   const totalScore = scoreResult?.totalScore ?? 0
@@ -1006,10 +1025,12 @@ function OverallResumeScore({
         </CardContent>
       </Card>
 
-      {/* Actionable Insights - Now part of the score section */}
-      {scoreResult && scoreResult.insights.length > 0 && (
-        <ActionableInsights insights={scoreResult.insights} />
-      )}
+      {/* Actionable Insights - AI-generated when available, fallback to heuristic */}
+      {showFeedback && aiInsights.length > 0 ? (
+        <ActionableInsights insights={aiInsights} />
+      ) : scoreResult && scoreResult.insights.length > 0 ? (
+        <ActionableInsights insights={scoreResult.insights as any} />
+      ) : null}
     </div>
   )
 }
@@ -1143,16 +1164,20 @@ const roleKeywords: Record<string, string[]> = {
 function InternshipSummary({
   experiences,
   roleTypes = [],
-  techSectors = []
+  techSectors = [],
+  xyzFeedback,
+  showFeedback = true
 }: {
   experiences: Experience[]
   roleTypes?: string[]
   techSectors?: string[]
+  xyzFeedback?: Record<number, { score: number; xyz_analysis: string; improvements: string[] }>
+  showFeedback?: boolean
 }) {
-  // Filter to only internships
-  const internships = experiences.filter(exp =>
-    exp.position.toLowerCase().includes('intern')
-  )
+  // Filter to only internships, preserving original indices for XYZ feedback lookup
+  const internships = experiences
+    .map((exp, originalIdx) => ({ exp, originalIdx }))
+    .filter(({ exp }) => exp.position.toLowerCase().includes('intern'))
   const internshipCount = internships.length
 
   // Calculate relevance for each experience
@@ -1173,7 +1198,7 @@ function InternshipSummary({
     })
   }
 
-  const relevantInternships = internships.filter(calculateRelevance)
+  const relevantInternships = internships.filter(({ exp }) => calculateRelevance(exp))
   const relevancePercent = internshipCount > 0
     ? Math.round((relevantInternships.length / internshipCount) * 100)
     : 0
@@ -1271,7 +1296,7 @@ function InternshipSummary({
         </div>
 
         {/* Internship list */}
-        <div className="space-y-3 max-h-80 overflow-y-auto">
+        <div className="space-y-3">
           {
             internships.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
@@ -1280,21 +1305,36 @@ function InternshipSummary({
                 <p className="text-sm mt-1">Your first internship is just around the corner!</p>
               </div >
             ) : (
-              internships.map((exp, idx) => {
+              internships.map(({ exp, originalIdx }) => {
                 const isRelevant = calculateRelevance(exp)
                 return (
                   <div
-                    key={idx}
+                    key={originalIdx}
                     className={cn(
                       "p-3 border rounded-lg bg-muted/5 dark:bg-muted/20 space-y-2",
                       isRelevant && roleTypes.length > 0 && "border-primary/30"
                     )}
                   >
+                    <div>
+                      <p className="font-medium text-sm">{exp.position}</p>
+                      <p className="text-xs text-muted-foreground">{exp.company}</p>
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       {new Date(exp.start_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                       {" — "}
                       {exp.end_date ? new Date(exp.end_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : "Present"}
                     </p>
+                    {/* Responsibilities & Achievements */}
+                    {(exp.responsibilities.length > 0 || exp.achievements.length > 0) && (
+                      <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
+                        {exp.responsibilities.map((r, rIdx) => (
+                          <li key={`r-${rIdx}`}>{r}</li>
+                        ))}
+                        {exp.achievements.map((a, aIdx) => (
+                          <li key={`a-${aIdx}`}>{a}</li>
+                        ))}
+                      </ul>
+                    )}
                     {exp.technologies.length > 0 && (
                       <div className="flex flex-wrap gap-1">
                         {exp.technologies.slice(0, 5).map((tech, tidx) => (
@@ -1306,6 +1346,10 @@ function InternshipSummary({
                           <Badge variant="secondary" className="text-xs">+{exp.technologies.length - 5}</Badge>
                         )}
                       </div>
+                    )}
+                    {/* Inline XYZ Analysis */}
+                    {showFeedback && xyzFeedback?.[originalIdx] && (
+                      <XYZInlineFeedback feedback={xyzFeedback[originalIdx]} />
                     )}
                   </div>
                 )
@@ -1706,38 +1750,14 @@ function RoleSkillsMatch({
 
 
 export default function DashboardPage() {
+  const { user, isLoaded } = useUser()
+  const { resumeData, isLoading: isResumeLoading, xyzFeedback, showFeedback, actionableInsights } = useResume()
   const [activeTab, setActiveTab] = useState("overall")
-  const [resumeData, setResumeData] = useState<any>(null)
-  const [score, setScore] = useState<number | null>(null)
-  const [breakdown, setBreakdown] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [currentFileName, setCurrentFileName] = useState<string | null>(null)
   const [questionnaireData, setQuestionnaireData] = useState<QuestionnaireData | null>(null)
 
-  useEffect(() => {
-    let isMounted = true
-    const loadResume = async () => {
-      setIsLoading(true)
-      try {
-        const response = await fetch("/api/resume")
-        const result = await response.json()
-        if (isMounted && result.success && result.data) {
-          setResumeData(result.data)
-          setScore(result.score)
-          setBreakdown(result.breakdown)
-        }
-      } catch (error) {
-        // fallback to mock data if needed
-        setResumeData(null)
-        setScore(null)
-        setBreakdown(null)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    loadResume()
-    return () => { isMounted = false }
-  }, [])
+  useSignInLogger()
+
+  const simpleBreakdown = resumeData ? getScoreBreakdown(resumeData) : null
 
   useEffect(() => {
     let isMounted = true
@@ -1780,29 +1800,20 @@ export default function DashboardPage() {
       devops: resumeData.skills?.devops_tools || [],
       certifications: resumeData.certifications?.map((cert: any) => cert.name) || [],
     },
-    resume: breakdown || mockStudentData.resume,
+    resume: simpleBreakdown || mockStudentData.resume,
   } : mockStudentData
 
   // Parse projects and experience from resume data
   // const projects = resumeData ? parseProjectsFromResume(resumeData) : []
 
   // Show loading state
-  if (isLoading) {
+  if (isResumeLoading) {
     return (
       <div className="min-h-screen bg-background p-8">
         <div className="mx-auto max-w-7xl">
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-foreground">Dashboard</h1>
-            <p className="mt-2 text-muted-foreground">
-              {currentFileName ? (
-                <span className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  Currently viewing: <span className="font-medium">{currentFileName}</span>
-                </span>
-              ) : (
-                "Loading resume..."
-              )}
-            </p>
+            <p className="mt-2 text-muted-foreground">Loading resume...</p>
           </div>
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
@@ -1851,16 +1862,7 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-7xl">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-foreground">Dashboard</h1>
-          <p className="mt-2 text-muted-foreground">
-            {currentFileName ? (
-              <span className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Currently viewing: <span className="font-medium">{currentFileName}</span>
-              </span>
-            ) : (
-              "Your personalized insights"
-            )}
-          </p>
+          <p className="mt-2 text-muted-foreground">Your personalized insights</p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -1898,6 +1900,9 @@ export default function DashboardPage() {
               roleTypes={questionnaireData?.roleTypes}
               techSectors={questionnaireData?.techSectors}
               resumeData={resumeData}
+              aiInsights={showFeedback ? actionableInsights : []}
+              xyzFeedback={showFeedback ? xyzFeedback : null}
+              showFeedback={showFeedback}
             />
 
 
@@ -1910,7 +1915,10 @@ export default function DashboardPage() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <CareerPathCourseworkChart />
+                  <CareerPathCourseworkChart
+                    roleTypes={questionnaireData?.roleTypes}
+                    techSectors={questionnaireData?.techSectors}
+                  />
                 </AccordionContent>
               </AccordionItem>
 
@@ -2022,6 +2030,8 @@ export default function DashboardPage() {
                     projects={resumeData?.projects || []}
                     roleTypes={questionnaireData?.roleTypes}
                     techSectors={questionnaireData?.techSectors}
+                    xyzFeedback={xyzFeedback?.projects}
+                    showFeedback={showFeedback}
                   />
                 </AccordionContent>
               </AccordionItem>
@@ -2054,6 +2064,8 @@ export default function DashboardPage() {
                     experiences={resumeData?.experience || []}
                     roleTypes={questionnaireData?.roleTypes}
                     techSectors={questionnaireData?.techSectors}
+                    xyzFeedback={xyzFeedback?.experience}
+                    showFeedback={showFeedback}
                   />
                 </AccordionContent>
               </AccordionItem>
