@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.931.0",
-    "@aws-sdk/s3-request-presigner": "^3.981.0",
+    "@aws-sdk/s3-request-presigner": "^3.997.0",
     "@clerk/nextjs": "^6.35.0",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
