@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react"
 import { useUser } from "@clerk/nextjs"
 import { Header } from "@/components/header"
+import Image from "next/image"
+import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -355,7 +357,7 @@ export default function ProfilePage() {
         <div className="flex items-center justify-between gap-4 mb-8 bg-card border rounded-xl p-6 shadow-sm">
           <div className="flex items-center gap-4">
             {user?.imageUrl ? (
-              <img src={user.imageUrl} alt="Profile" className="h-16 w-16 rounded-full border-2 border-primary/20" />
+              <Image src={user.imageUrl} alt="Profile" width={64} height={64} className="h-16 w-16 rounded-full border-2 border-primary/20" />
             ) : (
               <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center"><User className="h-8 w-8" /></div>
             )}
@@ -420,7 +422,7 @@ export default function ProfilePage() {
                     <FileText className="h-12 w-12 opacity-20 mb-4" />
                     <h3 className="text-lg font-semibold">No Resume Data</h3>
                     <p className="text-muted-foreground mb-4">Upload a resume to populate this editor</p>
-                    <Button asChild><a href="/">Upload Resume</a></Button>
+                    <Button asChild><Link href="/">Upload Resume</Link></Button>
                   </Card>
                 )}
               </div>
@@ -486,7 +488,7 @@ export default function ProfilePage() {
                     <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p className="text-lg font-medium">No resume submissions yet</p>
                     <Button className="mt-4" asChild>
-                      <a href="/">Upload Resume</a>
+                      <Link href="/">Upload Resume</Link>
                     </Button>
                   </div>
                 ) : (

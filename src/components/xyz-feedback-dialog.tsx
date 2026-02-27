@@ -55,9 +55,9 @@ export function XYZFeedbackDialog({ text, type, trigger }: XYZFeedbackDialogProp
                 {!feedback && !loading && (
                     <div className="flex flex-col items-center justify-center p-6 gap-4">
                         <p className="text-center text-muted-foreground">
-                            Analyze this description to see if it follows Google's XYZ formula:
+                            Analyze this description to see if it follows Google&apos;s XYZ formula:
                             <br />
-                            <em>"Accomplished [X] as measured by [Y], by doing [Z]"</em>
+                            <em>&quot;Accomplished [X] as measured by [Y], by doing [Z]&quot;</em>
                         </p>
                         <Button onClick={analyze}>Generate Analysis</Button>
                     </div>

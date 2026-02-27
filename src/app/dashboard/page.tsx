@@ -485,6 +485,61 @@ function getSuggestionsForRoles(roleTypes: string[]): {
   }
 }
 
+
+function SkillSection({
+  title,
+  icon: Icon,
+  iconColor,
+  items,
+  suggestedItems
+}: {
+  title: string
+  icon: React.ElementType
+  iconColor: string
+  items: string[]
+  suggestedItems: string[]
+}) {
+  const hasSuggestions = items.length === 0 && suggestedItems.length > 0
+
+  return (
+    <div className="p-4 border rounded-lg space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Icon className={`h-5 w-5 ${iconColor}`} />
+          <span className="font-medium text-sm">{title}</span>
+        </div>
+        <Badge variant="secondary">{items.length}</Badge>
+      </div>
+
+      {items.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {items.map((item, idx) => (
+            <Badge key={idx} variant="outline" className="text-xs">
+              {item}
+            </Badge>
+          ))}
+        </div>
+      ) : hasSuggestions ? (
+        <div className="mt-2">
+          <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+            <Star className="h-3 w-3 text-yellow-500" />
+            Suggested for your target roles:
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {suggestedItems.map((item, idx) => (
+              <Badge key={idx} variant="outline" className="text-xs border-dashed border-yellow-500/50 text-muted-foreground">
+                {item}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground mt-2">No skills listed</p>
+      )}
+    </div>
+  )
+}
+
 // Skills Radar Chart
 function SkillsRadarChart({
   skills,
@@ -501,60 +556,6 @@ function SkillsRadarChart({
     { category: "DevOps", count: skills.devops.length, fullMark: 5 },
     { category: "Certifications", count: skills.certifications.length, fullMark: 5 },
   ]
-
-  const SkillSection = ({
-    title,
-    icon: Icon,
-    iconColor,
-    items,
-    suggestedItems
-  }: {
-    title: string
-    icon: React.ElementType
-    iconColor: string
-    items: string[]
-    suggestedItems: string[]
-  }) => {
-    const hasSuggestions = items.length === 0 && suggestedItems.length > 0
-
-    return (
-      <div className="p-4 border rounded-lg space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Icon className={`h-5 w-5 ${iconColor}`} />
-            <span className="font-medium text-sm">{title}</span>
-          </div>
-          <Badge variant="secondary">{items.length}</Badge>
-        </div>
-
-        {items.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5 mt-2">
-            {items.map((item, idx) => (
-              <Badge key={idx} variant="outline" className="text-xs">
-                {item}
-              </Badge>
-            ))}
-          </div>
-        ) : hasSuggestions ? (
-          <div className="mt-2">
-            <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-              <Star className="h-3 w-3 text-yellow-500" />
-              Suggested for your target roles:
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {suggestedItems.map((item, idx) => (
-                <Badge key={idx} variant="outline" className="text-xs border-dashed border-yellow-500/50 text-muted-foreground">
-                  {item}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <p className="text-xs text-muted-foreground mt-2">No skills listed</p>
-        )}
-      </div>
-    )
-  }
 
   return (
     <Card>
